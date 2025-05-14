@@ -12,7 +12,7 @@ export default function GuestLayout({ children }) {
                         <ApplicationLogo className="sm:w-10 sm:h-10 w-10 h-10 transform scale-150 sm:scale-100 text-black dark:text-white" />
 
                         {/* Texto "ONECTA" visible solo en escritorio */}
-                        <span className="text-3xl font-bold text-black dark:text-white sm:block hidden">
+                        <span className="text-3xl font-bold text-black dark:text-white sm:block hidden title">
                             ONECTA
                         </span>
                     </Link>
