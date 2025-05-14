@@ -1,17 +1,25 @@
-import ApplicationLogo from '@/Components/ApplicationLogo';
-import { Link } from '@inertiajs/react';
+import ApplicationLogo from "@/Components/ApplicationLogo";
+import { Link } from "@inertiajs/react";
 
 export default function GuestLayout({ children }) {
     return (
-        <div className="flex min-h-screen flex-col items-center bg-gray-100 pt-6 sm:justify-center sm:pt-0">
-            <div>
-                <Link href="/">
-                    <ApplicationLogo className="h-20 w-20 fill-current text-gray-500" />
-                </Link>
-            </div>
+        <div className="min-h-screen flex items-center justify-center bg-white dark:bg-black px-4">
+            <div className="w-full max-w-md space-y-8">
+                {/* Logo + ONECTA */}
+                <div className="flex justify-center">
+                    <Link href="/" className="flex items-center space-x-2">
+                        {/* Logo más grande en móvil con proporciones */}
+                        <ApplicationLogo className="sm:w-10 sm:h-10 w-10 h-10 transform scale-150 sm:scale-100 text-black dark:text-white" />
 
-            <div className="mt-6 w-full overflow-hidden bg-white px-6 py-4 shadow-md sm:max-w-md sm:rounded-lg">
-                {children}
+                        {/* Texto "ONECTA" visible solo en escritorio */}
+                        <span className="text-3xl font-bold text-black dark:text-white sm:block hidden title">
+                            ONECTA
+                        </span>
+                    </Link>
+                </div>
+
+                {/* Contenido del formulario */}
+                <div className="mt-6">{children}</div>
             </div>
         </div>
     );
