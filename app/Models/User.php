@@ -22,7 +22,7 @@ class User extends Authenticatable // implements MustVerifyEmail (si aplica)
      */
     protected $fillable = [
         // 'name', // Quítalo si usas username
-        'username',
+        'name',
         'email',
         'password',
         'avatarURL',

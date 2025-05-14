@@ -5,7 +5,7 @@ use App\Http\Controllers\ProfileController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
-
+use App\Http\Controllers\PublicationController;
 
 Route::get('/', function () {
     return Inertia::render('Welcome', [
@@ -28,7 +28,7 @@ Route::middleware('auth')->group(function () {
 
 require __DIR__.'/auth.php';
 
-  Route::get('/users', [AdminUserController::class, 'index'])->middleware(['auth', 'verified'])
+Route::get('/users', [AdminUserController::class, 'index'])->middleware(['auth', 'verified'])
     ->name('admin.users.index');
 
 // Rutas del Panel de Administración de Usuarios
@@ -46,4 +46,8 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->name('admin.')->group(
         ->post('/users/{user}/restore', [AdminUserController::class, 'restore'])
         ->name('users.restore');
 });
+
+Route::resource('publications', PublicationController::class);
+
+Route::get('/publications', [PublicationController::class, 'index'])->name('publications.index');
 

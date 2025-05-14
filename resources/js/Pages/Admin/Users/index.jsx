@@ -9,6 +9,7 @@ import Modal from '@/Components/Modal'; // Un componente Modal reutilizable
 import TextInput from '@/Components/TextInput';
 import InputLabel from '@/Components/InputLabel';
 import InputError from '@/Components/InputError';
+import Swal from 'sweetalert2';
 
 export default function Index({ auth: authProp, users: usersProp, allRoles: allRolesProp, success, error, authUser }) {
     const { auth: pageAuth } = usePage().props; // auth.user tiene el usuario actual y sus permisos
@@ -58,16 +59,35 @@ export default function Index({ auth: authProp, users: usersProp, allRoles: allR
     };
 
     const handleBanUser = (user) => {
-        if (confirm(`¿Estás seguro de que quieres banear a ${user.name}?`)) {
-            destroy(route('admin.users.ban', user.id), { preserveScroll: true });
-        }
+        Swal.fire({
+            title: `¿Estás seguro de que quieres banear a ${user.name}?`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, banear',
+            cancelButtonText: 'Cancelar',
+        }).then((result) => {
+            if (result.isConfirmed) {
+                destroy(route('admin.users.ban', user.id), { preserveScroll: true });
+            }
+        });
     };
 
     const handleRestoreUser = (user) => {
-        if (confirm(`¿Estás seguro de que quieres restaurar a ${user.name}?`)) {
-            console.log(user.id);
-            post(route('admin.users.restore', user.id), {}, { preserveScroll: true });
-        }
+        Swal.fire({
+            title: `¿Estás seguro de que quieres restaurar a ${user.name}?`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, restaurar',
+            cancelButtonText: 'Cancelar',
+        }).then((result) => {
+            if (result.isConfirmed) {
+                post(route('admin.users.restore', user.id), {
+                    preserveScroll: true,
+                    onSuccess: (response) => Swal.fire('Restaurado', 'El usuario ha sido restaurado.', 'success'),
+                    onError: (error) => Swal.fire('Error', 'No se pudo restaurar el usuario.', 'error'),
+                });
+            }
+        });
     };
 
 
@@ -94,57 +114,63 @@ export default function Index({ auth: authProp, users: usersProp, allRoles: allR
                     )}
                     <div className="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
                         <div className="p-6 text-gray-900 dark:text-gray-100">
-                            <table className="w-full whitespace-nowrap">
-                                <thead>
-                                    <tr className="text-left font-bold">
-                                        <th className="pb-4 pt-6 px-6">Username</th>
-                                        <th className="pb-4 pt-6 px-6">Email</th>
-                                        <th className="pb-4 pt-6 px-6">Roles</th>
-                                        <th className="pb-4 pt-6 px-6">Estado</th>
-                                        <th className="pb-4 pt-6 px-6">Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {usersProp.data.map((user) => (
-                                        <tr key={user.id} className="hover:bg-gray-100 dark:hover:bg-gray-700 focus-within:bg-gray-100">
-                                            <td className="border-t px-6 py-4">{user.name}</td>
-                                            <td className="border-t px-6 py-4">{user.email}</td>
-                                            <td className="border-t px-6 py-4">
-                                                {user.roles.map(role => role.name).join(', ')}
-                                            </td>
-                                            <td className="border-t px-6 py-4">
-                                                {user.deleted_at ? (
-                                                    <span className="px-2 py-1 text-xs font-semibold text-red-700 bg-red-100 rounded-full">Baneado</span>
-                                                ) : (
-                                                    <span className="px-2 py-1 text-xs font-semibold text-green-700 bg-green-100 rounded-full">Activo</span>
-                                                )}
-                                            </td>
-                                            <td className="border-t px-6 py-4">
-                                                {canEditUsers && !user.deleted_at && ( // No editar si está baneado, o permitirlo según necesidad
-                                                    <SecondaryButton className="mr-2" onClick={() => openEditModal(user)}>
-                                                        Editar
-                                                    </SecondaryButton>
-                                                )}
-                                                {user.deleted_at && canUnbanUsers && (
-                                                    <PrimaryButton onClick={() => handleRestoreUser(user)}>
-                                                        Restaurar
-                                                    </PrimaryButton>
-                                                )}
-                                                {!user.deleted_at && canBanUsers && authUser.id !== user.id && (
-                                                    <DangerButton onClick={() => handleBanUser(user)}>
-                                                        Banear
-                                                    </DangerButton>
-                                                )}
-                                            </td>
+                            {/* Hacer la tabla desplazable horizontalmente en pantallas pequeñas */}
+                            <div className="overflow-x-auto">
+                                <table className="w-full whitespace-nowrap">
+                                    <thead>
+                                        <tr className="text-left font-bold">
+                                            <th className="pb-4 pt-6 px-6">Username</th>
+                                            <th className="pb-4 pt-6 px-6">Email</th>
+                                            <th className="pb-4 pt-6 px-6">Roles</th>
+                                            <th className="pb-4 pt-6 px-6">Estado</th>
+                                            <th className="pb-4 pt-6 px-6">Acciones</th>
                                         </tr>
-                                    ))}
-                                    {usersProp.data.length === 0 && (
-                                        <tr>
-                                            <td className="border-t px-6 py-4" colSpan="5">No se encontraron usuarios.</td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody>
+                                        {usersProp.data.map((user) => (
+                                            <tr key={user.id} className="hover:bg-gray-100 dark:hover:bg-gray-700 focus-within:bg-gray-100">
+                                                <td className="border-t px-6 py-4">{user.name}</td>
+                                                <td className="border-t px-6 py-4">{user.email}</td>
+                                                <td className="border-t px-6 py-4">
+                                                    {user.roles.map(role => role.name).join(', ')}
+                                                </td>
+                                                <td className="border-t px-6 py-4">
+                                                    {user.deleted_at ? (
+                                                        <span className="px-2 py-1 text-xs font-semibold text-red-700 bg-red-100 rounded-full">Baneado</span>
+                                                    ) : (
+                                                        <span className="px-2 py-1 text-xs font-semibold text-green-700 bg-green-100 rounded-full">Activo</span>
+                                                    )}
+                                                </td>
+                                                <td className="border-t px-6 py-4">
+                                                    {/* Ajustar los botones para que sean responsivos */}
+                                                    <div className="flex flex-col sm:flex-row sm:space-x-2 space-y-2 sm:space-y-0">
+                                                        {canEditUsers && !user.deleted_at && (
+                                                            <SecondaryButton onClick={() => openEditModal(user)}>
+                                                                Editar
+                                                            </SecondaryButton>
+                                                        )}
+                                                        {user.deleted_at && canUnbanUsers && (
+                                                            <PrimaryButton onClick={() => handleRestoreUser(user)}>
+                                                                Restaurar
+                                                            </PrimaryButton>
+                                                        )}
+                                                        {!user.deleted_at && canBanUsers && authUser.id !== user.id && (
+                                                            <DangerButton onClick={() => handleBanUser(user)}>
+                                                                Banear
+                                                            </DangerButton>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                        {usersProp.data.length === 0 && (
+                                            <tr>
+                                                <td className="border-t px-6 py-4" colSpan="5">No se encontraron usuarios.</td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                     <Pagination links={usersProp.links} className="mt-6" />

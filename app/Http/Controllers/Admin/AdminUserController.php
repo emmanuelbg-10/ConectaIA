@@ -10,6 +10,7 @@ use Spatie\Permission\Models\Role;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 
 class AdminUserController extends Controller
 {
@@ -92,19 +93,14 @@ class AdminUserController extends Controller
 
         return Redirect::route('admin.users.index')->with('success', 'Usuario baneado correctamente.');
     }
-
-    public function restore(User $user) // Aquí {user} debe ser el ID del usuario, incluso si está soft-deleted
+    
+     public function restore($user) 
     {
-    return Redirect::route('dashboard')->with('info', 'Esto es una prueba de retorno a dashboard.');
        
-        $userToRestore = User::withTrashed()->find($user->id); // Buscar el usuario incluso si está soft-deleted
-        if (!$userToRestore) {
-            return Redirect::route('admin.users.index')->with('error', 'Usuario no encontrado.');
-        }
-
-        
-        
+        $user = User::withTrashed()->findOrFail($user);
+         $user->restore(); // Simplemente llama a restore() en el modelo encontrado
 
         return Redirect::route('admin.users.index')->with('success', 'Usuario restaurado correctamente.');
     }
+
 }

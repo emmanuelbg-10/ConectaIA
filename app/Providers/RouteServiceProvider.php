@@ -1,37 +1,31 @@
 <?php
+
 namespace App\Providers;
 
-use Illuminate\Database\Eloquent\ModelNotFoundException;
-
-use Illuminate\Support\Facades\Route; // Asegúrate que está importado
-use Illuminate\Support\ServiceProvider;
+use Illuminate\Foundation\Support\Providers\RouteServiceProvider as ServiceProvider;
+use Illuminate\Support\Facades\Route;
+use App\Models\User; // Asegúrate de importar tu modelo User
 
 class RouteServiceProvider extends ServiceProvider
 {
-    /**
-     * This is the path to the "home" route for your application.
-     *
-     * Typically, users are redirected here after authentication.
-     *
-     * @var string
-     */
-    protected $namespace = 'App\Http\Controllers';
+    // ... otras propiedades y métodos
 
-    /**
-     * Define your route model bindings, pattern filters, etc.
-     */
-public function boot(): void
-{
-    // ...
-    Route::bind('user', function ($value) {
-        return \App\Models\User::withTrashed()->where('id', $value)->firstOrFail();
-    });
-    // O específicamente para un parámetro en una ruta
-    // Route::model('user_trashed', \App\Models\User::class, function ($value) {
-    // return \App\Models\User::withTrashed()->where('id', $value)->firstOrFail();
-    // });
-    // Y en tu ruta usarías: Route::post('/users/{user_trashed}/restore', ...)
+    public function boot(): void
+    {
+        parent::boot(); // Llama al boot del padre primero
 
-    parent::boot();
-}
+        // Esto le dice a Laravel cómo resolver explícitamente el parámetro 'user'
+        // en las rutas, incluyendo aquellos que están soft-deleted.
+        Route::bind('user', function ($value) {
+            return User::withTrashed()->where('id', $value)->firstOrFail();
+        });
+
+        // Alternativamente, si solo quieres que afecte a un parámetro específico
+        // y no a todos los {user} (por si en otros sitios no quieres incluir los trashed):
+        // Route::model('user_with_trashed', User::class, function ($value) {
+        //    return User::withTrashed()->where('id', $value)->firstOrFail();
+        // });
+        // Y en tu ruta tendrías que usar {user_with_trashed} en lugar de {user} para el restore.
+        // La opción con Route::bind('user', ...) es más directa si quieres que {user} siempre considere los trashed.
+    }
 }
