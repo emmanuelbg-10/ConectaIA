@@ -66,8 +66,8 @@ public function store(Request $request)
     ])->load('user', 'hashtags');
 
     // Respuesta para Inertia
-    return redirect()->back()->with([
-        'success' => 'Publicación creada con éxito.',
+    return back()->with([
+        'success' => 'Publicación creada con éxito',
         'newPublication' => $publication
     ]);
 }

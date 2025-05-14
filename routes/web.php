@@ -51,3 +51,10 @@ Route::resource('publications', PublicationController::class);
 
 Route::get('/publications', [PublicationController::class, 'index'])->name('publications.index');
 
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/publications', [PublicationController::class, 'index'])
+        ->name('publications.index');
+    
+    Route::post('/publications', [PublicationController::class, 'store'])
+        ->name('publications.store');
+});

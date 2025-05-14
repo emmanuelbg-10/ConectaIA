@@ -4,8 +4,9 @@ import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { PaperAirplaneIcon, PhotographIcon, XIcon } from '@heroicons/react/outline';
 import { Inertia } from '@inertiajs/inertia';
 
+
 export default function TwitterStyleFeed({ authUser, publications: initialPublications }) {
-    
+    const { props: pageProps } = usePage();
     // Estados para el formulario
     const { data, setData, post, processing, errors, reset } = useForm({
     textContent: '',
@@ -84,35 +85,50 @@ export default function TwitterStyleFeed({ authUser, publications: initialPublic
     };
 
     // Enviar publicación
-const handleSubmit = (e) => {
-    e.preventDefault();
+// Reemplaza tu handleSubmit con esta versión
+ const handleSubmit = (e) => {
+        e.preventDefault();
 
-    const formData = new FormData();
-    formData.append('textContent', data.textContent);
-    if (data.image) {
-        formData.append('image', data.image);
-    }
-
-    post(route('publications.store'), {
-        data: formData,
-        preserveScroll: false, // Importante: vuelve al inicio
-        preserveState: false,  // Importante: recarga el estado inicial
-        onSuccess: () => {
-            reset();
-            setData('preview', null);
-            setShowForm(false);
-            // Recargar la página de publicaciones desde el backend
-            router.visit(route('publications.index'), {
-                replace: true,
-                preserveScroll: false,
-            });
-            Inertia.reload({ preserveScroll: false });
-        },
-        onError: () => {
-            // Manejo de errores si lo necesitas
+        const formData = new FormData();
+        formData.append('textContent', data.textContent);
+        if (data.image) {
+            formData.append('image', data.image);
         }
-    });
-};
+
+        // Creación optimista
+        const optimisticPublication = {
+            id: `temp-${Date.now()}`,
+            textContent: data.textContent,
+            user: authUser,
+            created_at: new Date().toISOString(),
+            imageURL: data.preview,
+            hashtags: []
+        };
+
+        setPublications(prev => [optimisticPublication, ...prev]);
+        setShowForm(false);
+
+        post(route('publications.store'), {
+            data: formData,
+            preserveScroll: true,
+            preserveState: true,
+            onSuccess: () => {
+                reset();
+                setData('preview', null);
+                
+                // Usar pageProps en lugar de page
+                if (pageProps.newPublication) {
+                    setPublications(prev => [
+                        pageProps.newPublication,
+                        ...prev.filter(p => p.id !== optimisticPublication.id)
+                    ]);
+                }
+            },
+            onError: () => {
+                setPublications(prev => prev.filter(p => p.id !== optimisticPublication.id));
+            }
+        });
+    };
 
     // Formatear fecha
     const formatDate = (dateString) => {
