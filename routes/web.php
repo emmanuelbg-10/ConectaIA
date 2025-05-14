@@ -1,9 +1,11 @@
 <?php
 
+use App\Http\Controllers\Admin\AdminUserController as AdminUserController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+
 
 Route::get('/', function () {
     return Inertia::render('Welcome', [
@@ -25,3 +27,23 @@ Route::middleware('auth')->group(function () {
 });
 
 require __DIR__.'/auth.php';
+
+  Route::get('/users', [AdminUserController::class, 'index'])->middleware(['auth', 'verified'])
+    ->name('admin.users.index');
+
+// Rutas del Panel de Administración de Usuarios
+Route::middleware(['auth', 'verified'])->prefix('admin')->name('admin.')->group(function () {
+
+    Route::middleware(['permission:editar usuarios']) // Solo Admin
+        ->put('/users/{user}', [AdminUserController::class, 'update'])
+        ->name('users.update');
+
+    Route::middleware(['permission:banear usuarios']) // Admin y Moderador
+        ->delete('/users/{user}', [AdminUserController::class, 'ban'])
+        ->name('users.ban');
+
+    Route::middleware(['permission:desbanear usuarios']) // Admin y Moderador
+        ->post('/users/{user}/restore', [AdminUserController::class, 'restore'])
+        ->name('users.restore');
+});
+

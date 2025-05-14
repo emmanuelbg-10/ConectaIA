@@ -8,10 +8,12 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable // implements MustVerifyEmail (si aplica)
 {
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable,HasRoles,SoftDeletes;
 
     /**
      * The attributes that are mass assignable.
@@ -26,6 +28,12 @@ class User extends Authenticatable // implements MustVerifyEmail (si aplica)
         'avatarURL',
         'roleId',
     ];
+    /**
+     * The attributes that should be cast to native types.
+     *
+     * @var array<string, string>
+     */
+    protected $dates = ['deleted_at'];
 
     /**
      * The attributes that should be hidden for serialization.

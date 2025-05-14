@@ -13,8 +13,7 @@ return new class extends Migration
     {
         Schema::create('users', function (Blueprint $table) {
             $table->id(); // PK id(INT AUTO_INCREMENT) - Estándar de Laravel
-            // $table->string('name'); // Columna de Breeze, la comentamos o eliminamos si usamos username
-            $table->string('username', 100)->unique(); // username (VARCHAR(100)) - Añadido y único
+            $table->string('name'); // Columna de Breeze, la comentamos o eliminamos si usamos username
             $table->string('email')->unique(); // email (VARCHAR(255)) - Estándar de Breeze/Laravel
             $table->timestamp('email_verified_at')->nullable(); // Estándar de Breeze/Laravel
             $table->string('password'); // password (VARCHAR(255)) - Estándar de Breeze/Laravel

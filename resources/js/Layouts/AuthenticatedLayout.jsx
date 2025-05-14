@@ -5,11 +5,18 @@ import ResponsiveNavLink from '@/Components/ResponsiveNavLink';
 import { Link, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 
-export default function AuthenticatedLayout({ header, children }) {
-    const user = usePage().props.auth.user;
-
+export default function AuthenticatedLayout({ header, children , authUser }) {
+    let user = usePage().props.auth.user;
+    
+    
     const [showingNavigationDropdown, setShowingNavigationDropdown] =
-        useState(false);
+    useState(false);
+    
+    if (user=== undefined) {
+       
+        user = authUser;
+        console.log(user); // Verifica si el usuario está disponible
+}
 
     return (
         <div className="min-h-screen bg-gray-100">
@@ -29,6 +36,10 @@ export default function AuthenticatedLayout({ header, children }) {
                                     active={route().current('dashboard')}
                                 >
                                     Dashboard
+                                </NavLink>
+
+                                <NavLink href={route('admin.users.index')} active={route().current('admin.users.index')}>
+                                    Gestión Usuarios
                                 </NavLink>
                             </div>
                         </div>
@@ -163,11 +174,7 @@ export default function AuthenticatedLayout({ header, children }) {
             </nav>
 
             {header && (
-                <header className="bg-white shadow">
-                    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-                        {header}
-                    </div>
-                </header>
+                <header className="bg-white shadow"></header>
             )}
 
             <main>{children}</main>
