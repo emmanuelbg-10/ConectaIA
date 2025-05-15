@@ -9,10 +9,10 @@ export default function GuestLayout({ children }) {
                 <div className="flex justify-center">
                     <Link href="/" className="flex items-center space-x-2">
                         {/* Logo más grande en móvil con proporciones */}
-                        <ApplicationLogo className="sm:w-10 sm:h-10 w-10 h-10 transform scale-150 sm:scale-100 text-black dark:text-white" />
+                        <ApplicationLogo className="sm:w-20 sm:h-20 w-20 h-20 transform scale-150 sm:scale-100 text-black dark:text-white" />
 
                         {/* Texto "ONECTA" visible solo en escritorio */}
-                        <span className="text-3xl font-bold text-black dark:text-white sm:block hidden title">
+                        <span className="text-5xl font-bold text-black dark:text-white sm:block hidden title">
                             ONECTA
                         </span>
                     </Link>

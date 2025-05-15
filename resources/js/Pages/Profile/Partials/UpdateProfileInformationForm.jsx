@@ -3,6 +3,8 @@ import InputLabel from "@/Components/InputLabel";
 import PrimaryButton from "@/Components/PrimaryButton";
 import TextInput from "@/Components/TextInput";
 import { Transition } from "@headlessui/react";
+import LogoutButton from "@/Components/LogoutButton";
+
 import { Link, useForm, usePage } from "@inertiajs/react";
 
 export default function UpdateProfileInformation({
@@ -27,7 +29,7 @@ export default function UpdateProfileInformation({
     return (
         <section className={className}>
             <header>
-                <h2 className="text-lg font-medium text-[#214478]">
+                <h2 className="text-xl font-medium text-[#214478] title">
                     Información del perfil
                 </h2>
 
@@ -95,7 +97,13 @@ export default function UpdateProfileInformation({
                 )}
 
                 <div className="flex items-center gap-4">
-                    <PrimaryButton disabled={processing}>Guardar</PrimaryButton>
+                    <div className="flex items-inline space-x-8">
+                        <PrimaryButton disabled={processing}>
+                            Guardar
+                        </PrimaryButton>
+
+                        <LogoutButton></LogoutButton>
+                    </div>
 
                     <Transition
                         show={recentlySuccessful}
