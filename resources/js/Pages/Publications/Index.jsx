@@ -1,31 +1,30 @@
 import React, { useState, useEffect } from "react";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import { Head, useForm, usePage } from "@inertiajs/react";
+import Swal from "sweetalert2";
 import {
     PaperAirplaneIcon,
     PhotographIcon,
     XIcon,
 } from "@heroicons/react/outline";
 
+const csrf = document.querySelector('meta[name="csrf-token"]');
+const csrfToken = csrf ? csrf.getAttribute("content") : "";
+
 export default function TwitterStyleFeed({
     authUser,
     publications: initialPublications,
 }) {
     const { props: pageProps } = usePage();
-    // Estados para el formulario
     const { data, setData, post, processing, errors, reset } = useForm(
         {
             textContent: "",
             image: null,
             preview: null,
         },
-        {
-            resetOnSuccess: false, // Importante para mantener el estado
-        }
+        { resetOnSuccess: false }
     );
     const [showForm, setShowForm] = useState(false);
-
-    // Estados para el scroll infinito
     const [publications, setPublications] = useState(
         initialPublications.data || initialPublications
     );
@@ -34,16 +33,13 @@ export default function TwitterStyleFeed({
     );
     const [loadingMore, setLoadingMore] = useState(false);
 
-    // Sincronizar con props iniciales
     useEffect(() => {
         setPublications(initialPublications.data);
         setNextPageUrl(initialPublications.next_page_url);
     }, [initialPublications]);
 
-    // Función para cargar más publicaciones
     const loadMorePublications = async () => {
         if (!nextPageUrl || loadingMore) return;
-
         setLoadingMore(true);
         try {
             const response = await fetch(nextPageUrl, {
@@ -52,44 +48,32 @@ export default function TwitterStyleFeed({
                     "X-Requested-With": "XMLHttpRequest",
                 },
             });
-
-            if (!response.ok) {
-                throw new Error("Network response was not ok");
-            }
-
+            if (!response.ok) throw new Error("Network response was not ok");
             const result = await response.json();
-
             setPublications((prev) => [...prev, ...result.data]);
             setNextPageUrl(result.next_page_url);
         } catch (error) {
-            console.error("Error loading more publications:", error);
+            Swal.fire("Error", "No se pudieron cargar más publicaciones.", "error");
         } finally {
             setLoadingMore(false);
         }
     };
 
-    // Efecto para el scroll infinito
     useEffect(() => {
         const handleScroll = () => {
-            const { scrollTop, scrollHeight, clientHeight } =
-                document.documentElement;
+            const { scrollTop, scrollHeight, clientHeight } = document.documentElement;
             const isNearBottom = scrollTop + clientHeight >= scrollHeight - 100;
-
             if (isNearBottom && nextPageUrl && !loadingMore) {
                 loadMorePublications();
             }
         };
-
         window.addEventListener("scroll", handleScroll);
         return () => window.removeEventListener("scroll", handleScroll);
     }, [nextPageUrl, publications, loadingMore]);
 
-    // Manejar selección de imagen
     const handleImageChange = (e) => {
         const file = e.target.files[0];
         setData("image", file);
-
-        // Mostrar previsualización
         if (file) {
             const reader = new FileReader();
             reader.onload = () => setData("preview", reader.result);
@@ -97,10 +81,42 @@ export default function TwitterStyleFeed({
         }
     };
 
-    // Enviar publicación
-    // Reemplaza tu handleSubmit con esta versión
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
+
+        Swal.fire({
+            title: "Validando contenido...",
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            },
+        });
+
+        console.log("Enviando a Gemini:", data.textContent);
+        try {
+            const geminiRes = await fetch("/ConectaIA/public/moderate-text", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-Requested-With": "XMLHttpRequest",
+                    "X-CSRF-TOKEN": csrfToken,
+                },
+                body: JSON.stringify({ text: data.textContent }),
+            });
+            console.log("Respuesta recibida de Gemini");
+            const geminiData = await geminiRes.json();
+            console.log("Datos de Gemini:", geminiData);
+            if (!geminiData.allowed) {
+                Swal.fire("Contenido bloqueado", geminiData.message || "Tu publicación contiene contenido ofensivo.", "warning");
+                return;
+            }
+        } catch (err) {
+            console.error("Error en fetch:", err);
+            Swal.fire("Error", "No se pudo validar el contenido. Intenta de nuevo.", "error");
+            return;
+        }
+
+        Swal.close();
 
         const formData = new FormData();
         formData.append("textContent", data.textContent);
@@ -108,7 +124,7 @@ export default function TwitterStyleFeed({
             formData.append("image", data.image);
         }
 
-        // Creación optimista
+        // Creación optimista (opcional)
         const optimisticPublication = {
             id: `temp-${Date.now()}`,
             textContent: data.textContent,
@@ -128,14 +144,11 @@ export default function TwitterStyleFeed({
             onSuccess: () => {
                 reset();
                 setData("preview", null);
-
-                // Usar pageProps en lugar de page
+                Swal.fire("¡Publicado!", "Tu publicación fue enviada correctamente.", "success");
                 if (pageProps.newPublication) {
                     setPublications((prev) => [
                         pageProps.newPublication,
-                        ...prev.filter(
-                            (p) => p.id !== optimisticPublication.id
-                        ),
+                        ...prev.filter((p) => p.id !== optimisticPublication.id),
                     ]);
                 }
             },
@@ -143,11 +156,11 @@ export default function TwitterStyleFeed({
                 setPublications((prev) =>
                     prev.filter((p) => p.id !== optimisticPublication.id)
                 );
+                Swal.fire("Error", "No se pudo publicar. Intenta de nuevo.", "error");
             },
         });
     };
 
-    // Formatear fecha
     const formatDate = (dateString) => {
         const options = {
             day: "numeric",

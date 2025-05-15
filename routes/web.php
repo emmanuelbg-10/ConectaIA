@@ -6,6 +6,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use App\Http\Controllers\PublicationController;
+use App\Http\Controllers\ModerationController;
 
 Route::get('/', function () {
     return Inertia::render('Welcome', [
@@ -58,3 +59,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/publications', [PublicationController::class, 'store'])
         ->name('publications.store');
 });
+
+Route::post('/moderate-text', [ModerationController::class, 'moderate'])
+    ->middleware('auth');
+
+Route::view('/moderate-test', 'moderate-test');
