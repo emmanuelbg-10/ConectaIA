@@ -64,7 +64,10 @@ export default function DeleteUserForm({ className = "" }) {
             </DangerButton>
 
             <Modal show={confirmandoEliminacion} onClose={cerrarModal}>
-                <form onSubmit={eliminarUsuario} className="p-6">
+                <form
+                    onSubmit={eliminarUsuario}
+                    className="p-6 bg-white dark:bg-gray-900 rounded-md"
+                >
                     <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100">
                         ¿Estás seguro de que deseas eliminar tu cuenta?
                     </h2>
@@ -103,7 +106,7 @@ export default function DeleteUserForm({ className = "" }) {
                         />
                     </div>
 
-                    <div className="mt-6 flex justify-end">
+                    <div className="mt-6 flex justify-between">
                         <SecondaryButton onClick={cerrarModal}>
                             Cancelar
                         </SecondaryButton>

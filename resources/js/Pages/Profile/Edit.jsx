@@ -1,16 +1,32 @@
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
-import { Head } from "@inertiajs/react";
+import { Head, usePage } from "@inertiajs/react";
 import DeleteUserForm from "./Partials/DeleteUserForm";
 import UpdatePasswordForm from "./Partials/UpdatePasswordForm";
 import UpdateProfileInformationForm from "./Partials/UpdateProfileInformationForm";
+import { Link } from "@inertiajs/react";
 
 export default function Edit({ mustVerifyEmail, status }) {
+    const user = usePage().props.auth.user;
+
     return (
         <AuthenticatedLayout>
             <Head title="Perfil" />
 
             <div className="py-12">
                 <div className="mx-auto max-w-7xl space-y-12 sm:px-6 lg:px-8">
+                    {/* Mostrar enlace solo si el usuario es admin */}
+
+                    {user && (
+                        <div className="mb-4">
+                            <Link
+                                href={route("admin.users.index")}
+                                className="text-blue-600 hover:text-blue-800 underline"
+                            >
+                                Gestión Usuarios
+                            </Link>
+                        </div>
+                    )}
+
                     <UpdateProfileInformationForm
                         mustVerifyEmail={mustVerifyEmail}
                         status={status}

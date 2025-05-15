@@ -16,7 +16,7 @@ export default function AuthenticatedLayout({ children }) {
     const [showingNavigationDropdown] = useState(false);
 
     return (
-        <div className="min-h-screen bg-white text-black dark:bg-black dark:text-white flex">
+        <div className="min-h-screen w-full bg-white text-black dark:bg-black dark:text-white flex">
             {/* Sidebar para escritorio */}
             <aside className="hidden md:flex lg:flex flex-col justify-center items-center gap-8 bg-white dark:bg-black border-r dark:border-gray-800 w-64 max-w-[100vw] md:w-48 lg:w-64 py-8 fixed top-0 left-0 h-screen z-40 overflow-y-auto">
                 <Link href="/">
@@ -40,7 +40,7 @@ export default function AuthenticatedLayout({ children }) {
             </aside>
 
             {/* Contenido principal */}
-            <div className="flex-1 flex flex-col">
+            <div className="flex-1 flex flex-col bg-white dark:bg-black">
                 {showingNavigationDropdown && (
                     <div className="md:hidden px-4 py-2 space-y-1 border-b dark:border-gray-800 bg-white dark:bg-black">
                         <ResponsiveNavLink
@@ -65,7 +65,7 @@ export default function AuthenticatedLayout({ children }) {
                 )}
 
                 {/* Contenido principal */}
-                <main className="flex-1 overflow-y-auto p-4 md:ml-48 lg:ml-64">
+                <main className="flex-1 overflow-y-auto p-4 md:ml-48 lg:ml-64 relative bg-white dark:bg-black">
                     {children}
                 </main>
 
