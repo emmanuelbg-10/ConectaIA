@@ -7,6 +7,7 @@ use App\Models\Hashtag;
 use App\Models\Mention;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
 class PublicationController extends Controller
