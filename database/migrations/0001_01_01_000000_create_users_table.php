@@ -12,15 +12,18 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('users', function (Blueprint $table) {
-            $table->id();
-            $table->string('name');
-            $table->string('email')->unique();
-            $table->timestamp('email_verified_at')->nullable();
-            $table->string('password');
-            $table->rememberToken();
-            $table->timestamps();
+            $table->id(); // PK id(INT AUTO_INCREMENT) - Estándar de Laravel
+            $table->string('name'); // Columna de Breeze, la comentamos o eliminamos si usamos username
+            $table->string('email')->unique(); // email (VARCHAR(255)) - Estándar de Breeze/Laravel
+            $table->timestamp('email_verified_at')->nullable(); // Estándar de Breeze/Laravel
+            $table->string('password'); // password (VARCHAR(255)) - Estándar de Breeze/Laravel
+            $table->string('avatarURL')->nullable(); // avatarURL (VARCHAR(255)) - Añadido, puede ser nulo
+            $table->unsignedBigInteger('roleId')->nullable(); // roleId (INT) - Añadido, podría ser nulo o tener un default. Asumiendo que es un ID simple, no una FK formal aquí.
+            $table->rememberToken(); // Estándar de Breeze/Laravel
+            $table->timestamps(); // created_at, updated_at (TIMESTAMP) - Estándar de Laravel
         });
 
+        // Estas tablas son creadas por Breeze, las dejamos como están o las adaptamos si es necesario
         Schema::create('password_reset_tokens', function (Blueprint $table) {
             $table->string('email')->primary();
             $table->string('token');
