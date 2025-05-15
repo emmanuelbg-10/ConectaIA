@@ -10,14 +10,29 @@ import ApplicationLogo from "@/Components/ApplicationLogo";
 import NavLink from "@/Components/NavLink";
 import ResponsiveNavLink from "@/Components/ResponsiveNavLink";
 import { Link } from "@inertiajs/react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import ChatSidebar from "@/Components/ChatSidebar";
+import ChatWindow from "@/Components/ChatWindow";
 
-export default function AuthenticatedLayout({ children }) {
+export default function AuthenticatedLayout({ children, followers }) {
     const [showingNavigationDropdown] = useState(false);
+    const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+    const isMobileChat = windowWidth < 1200;
+    const [selectedChat, setSelectedChat] = useState(null);
+
+    useEffect(() => {
+        const handleResize = () => {
+            setWindowWidth(window.innerWidth);
+        };
+
+        window.addEventListener("resize", handleResize);
+
+        return () => window.removeEventListener("resize", handleResize);
+    }, []);
 
     return (
-        <div className="min-h-screen w-full bg-white text-black dark:bg-black dark:text-white flex">
-            {/* Sidebar para escritorio */}
+        <div className="min-h-screen w-full bg-white text-black dark:bg-black flex">
+            {/* Sidebar principal (izquierda) */}
             <aside className="hidden md:flex lg:flex flex-col justify-center items-center gap-8 bg-white dark:bg-black border-r dark:border-gray-800 w-64 max-w-[100vw] md:w-48 lg:w-64 py-8 fixed top-0 left-0 h-screen z-40 overflow-y-auto">
                 <Link href="/">
                     <ApplicationLogo className="h-16 w-16 text-black dark:text-white" />
@@ -37,6 +52,13 @@ export default function AuthenticatedLayout({ children }) {
                     active={route().current("profile.edit")}
                 />
                 <NavLink href="/settings" icon={FiSettings} label="Settings" />
+                {isMobileChat && (
+                    <NavLink
+                        href={route("chat.index")}
+                        icon={FiUsers}
+                        label="People"
+                    />
+                )}
             </aside>
 
             {/* Contenido principal */}
@@ -55,7 +77,8 @@ export default function AuthenticatedLayout({ children }) {
                         <ResponsiveNavLink href="/notifications">
                             Alerts
                         </ResponsiveNavLink>
-                        <ResponsiveNavLink href="/users">
+                        <ResponsiveNavLink href={route("chat.index")}>
+                            {/* Enlace al chat completo en móvil */}
                             People
                         </ResponsiveNavLink>
                         <ResponsiveNavLink href="/settings">
@@ -65,12 +88,19 @@ export default function AuthenticatedLayout({ children }) {
                 )}
 
                 {/* Contenido principal */}
-                <main className="flex-1 overflow-y-auto p-4 md:ml-48 lg:ml-64 relative bg-white dark:bg-black">
-                    {children}
+                <main className="flex-1 p-4 md:ml-48 lg:ml-64 relative bg-white dark:bg-black">
+                    {selectedChat ? (
+                        <ChatWindow
+                            selectedChat={selectedChat}
+                            onClose={() => setSelectedChat(null)}
+                        />
+                    ) : (
+                        children
+                    )}
                 </main>
 
                 {/* Nav inferior móvil */}
-                <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-black border-t dark:border-gray-800 flex justify-around items-center h-16">
+                <nav className="md:hidden flex bottom-0 left-0 right-0 z-50 bg-white dark:bg-black border-t dark:border-gray-800 justify-around items-center h-16">
                     <NavLink
                         href={route("dashboard")}
                         icon={FiHome}
@@ -92,7 +122,12 @@ export default function AuthenticatedLayout({ children }) {
                         label="Profile"
                         active={route().current("profile.edit")}
                     />
-                    <NavLink href="/users" icon={FiUsers} label="People" />
+                    <NavLink
+                        href={route("chat.index")}
+                        icon={FiUsers}
+                        label="People"
+                    />{" "}
+                    {/* Botón en la nav inferior */}
                     <NavLink
                         href="/settings"
                         icon={FiSettings}
@@ -100,6 +135,14 @@ export default function AuthenticatedLayout({ children }) {
                     />
                 </nav>
             </div>
+            {!isMobileChat && (
+                <div className="hidden md:block sticky top-0 right-0 h-screen z-30 w-96 max-w-[100vw]">
+                    <ChatSidebar
+                        followers={followers}
+                        onChatSelect={(follower) => setSelectedChat(follower)}
+                    />
+                </div>
+            )}
         </div>
     );
 }

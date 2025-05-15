@@ -6,6 +6,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use App\Http\Controllers\PublicationController;
+use App\Http\Controllers\ChatController; // Asegúrate de importar tu controlador de chat
 
 Route::get('/', function () {
     return Inertia::render('Welcome', [
@@ -54,7 +55,10 @@ Route::get('/publications', [PublicationController::class, 'index'])->name('publ
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/publications', [PublicationController::class, 'index'])
         ->name('publications.index');
-    
+
     Route::post('/publications', [PublicationController::class, 'store'])
         ->name('publications.store');
+
+    // **Añade esta ruta para la página del chat**
+    Route::get('/chat', [ChatController::class, 'index'])->name('chat.index');
 });
