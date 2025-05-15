@@ -100,7 +100,7 @@ export default function AuthenticatedLayout({ children, followers }) {
                 </main>
 
                 {/* Nav inferior móvil */}
-                <nav className="md:hidden flex bottom-0 left-0 right-0 z-50 bg-white dark:bg-black border-t dark:border-gray-800 justify-around items-center h-16">
+                <nav className="md:hidden flex sticky bottom-0 left-0 right-0 z-50 bg-white dark:bg-black border-t dark:border-gray-800 justify-around items-center h-16">
                     <NavLink
                         href={route("dashboard")}
                         icon={FiHome}

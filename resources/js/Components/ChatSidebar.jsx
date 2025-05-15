@@ -15,7 +15,7 @@ const createFakeUser = () => ({
 
 const ChatSidebar = ({ followers, onChatSelect }) => {
     // Genera una lista de usuarios falsos para simular los seguidores
-    const fakeFollowers = Array.from({ length: 5 }, () => createFakeUser());
+    const fakeFollowers = Array.from({ length: 10 }, () => createFakeUser());
 
     const handleChatClick = (follower) => {
         onChatSelect(follower);
@@ -25,7 +25,7 @@ const ChatSidebar = ({ followers, onChatSelect }) => {
         <div className="w-full md:w-96 h-screen bg-white dark:bg-black border-l border-gray-200 dark:border-gray-800 z-40 overflow-y-auto shadow-lg">
             {/* Header */}
             <div className="p-8 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-black">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                <h2 className="text-xl font-bold text-[#214478] title">
                     Chats Privados
                 </h2>
             </div>
