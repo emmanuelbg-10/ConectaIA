@@ -63,7 +63,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 Route::post('/moderate-text', [ModerationController::class, 'moderate'])
-    ->middleware('auth');
+    ->middleware('auth')->name('moderate-text');
 
 Route::view('/moderate-test', 'moderate-test');
 

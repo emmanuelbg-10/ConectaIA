@@ -179,7 +179,7 @@ export default function Show({ publication, authUser }) {
         });
 
         try {
-            const geminiRes = await fetch("/ConectaIA/public/moderate-text", {
+            const geminiRes = await fetch("/moderate-text", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -229,7 +229,7 @@ export default function Show({ publication, authUser }) {
         });
 
         try {
-            const geminiRes = await fetch("/ConectaIA/public/moderate-text", {
+            const geminiRes = await fetch("/moderate-text", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -283,7 +283,7 @@ export default function Show({ publication, authUser }) {
         });
 
         try {
-            const geminiRes = await fetch("/ConectaIA/public/moderate-text", {
+            const geminiRes = await fetch("/moderate-text", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

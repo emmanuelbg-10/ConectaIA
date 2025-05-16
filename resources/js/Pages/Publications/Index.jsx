@@ -94,7 +94,7 @@ export default function TwitterStyleFeed({
 
         console.log("Enviando a Gemini:", data.textContent);
         try {
-            const geminiRes = await fetch("/ConectaIA/public/moderate-text", {
+            const geminiRes = await fetch("moderate-text", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -163,7 +163,7 @@ export default function TwitterStyleFeed({
 
     const handleLike = async (publicationId) => {
         try {
-            const res = await fetch(`/ConectaIA/public/publications/${publicationId}/like`, {
+            const res = await fetch(`publications/${publicationId}/like`, {
                 method: "POST",
                 headers: {
                     "X-CSRF-TOKEN": csrfToken,
@@ -393,7 +393,7 @@ export default function TwitterStyleFeed({
                                            <button
     type="button"
     className="flex items-center space-x-1 text-gray-500 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400 group"
-    onClick={() => window.location.href = `/ConectaIA/public/publications/${publication.id}`}
+    onClick={() => window.location.href = `publications/${publication.id}`}
 >
     <div className="p-2 rounded-full group-hover:bg-blue-50 dark:group-hover:bg-blue-900">
         <svg
@@ -441,10 +441,31 @@ export default function TwitterStyleFeed({
     type="button"
     className="flex items-center text-gray-500 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400 group"
     onClick={() => {
-        const url = `${window.location.origin}/ConectaIA/public/publications/${publication.id}`;
-        navigator.clipboard.writeText(url).then(() => {
-            Swal.fire("¡Enlace copiado!", "El enlace de la publicación se ha copiado al portapapeles.", "success");
-        });
+        if (!publication || !publication.id) {
+            Swal.fire("Error", "No se encontró la publicación.", "error");
+            return;
+        }
+        const url = `${window.location.origin}/publications/${publication.id}`;
+        if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+            navigator.clipboard.writeText(url).then(() => {
+                Swal.fire("¡Enlace copiado!", "El enlace de la publicación se ha copiado al portapapeles.", "success");
+            }).catch(() => {
+                Swal.fire("Error", "No se pudo copiar el enlace al portapapeles.", "error");
+            });
+        } else {
+            // Fallback: selecciona y copia usando un input temporal
+            const tempInput = document.createElement("input");
+            tempInput.value = url;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            try {
+                document.execCommand("copy");
+                Swal.fire("¡Enlace copiado!", "El enlace de la publicación se ha copiado al portapapeles.", "success");
+            } catch {
+                Swal.fire("Error", "No se pudo copiar el enlace al portapapeles.", "error");
+            }
+            document.body.removeChild(tempInput);
+        }
     }}
 >
     <div className="p-2 rounded-full group-hover:bg-blue-50 dark:group-hover:bg-blue-900">
