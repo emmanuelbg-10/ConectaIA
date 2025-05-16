@@ -42,6 +42,16 @@ public function index(Request $request): Response|JsonResponse
         ->latest()
         ->paginate(10);
 
+    // Mapea cada publicación para agregar likesCount y likedByMe
+    $publications->getCollection()->transform(function ($publication) use ($request) {
+        $publication->likesCount = $publication->likes()->count();
+        $publication->responsesCount = $publication->responses()->count();
+        $publication->likedByMe = $request->user()
+            ? $publication->likes()->where('user_id', $request->user()->id)->exists()
+            : false;
+        return $publication;
+    });
+
     // Solo responde JSON si la petición es AJAX Y NO es una petición Inertia
     if ($request->ajax() && !$request->header('X-Inertia')) {
         return response()->json([
@@ -124,10 +134,32 @@ public function store(Request $request): RedirectResponse
      */
     public function show(Publication $publication): Response
     {
-        $publication->load(['user', 'hashtags', 'mentions.user']);
+        $publication->load('user');
+
+        // Trae TODAS las respuestas de la publicación (no solo las principales)
+        $responses = \App\Models\Response::where('publication_id', $publication->id)
+            ->with('user')
+            ->get();
+
+        // Agrupa por parent_id
+        $grouped = $responses->groupBy('parent_id');
+
+        // Función recursiva para anidar
+        $buildTree = function($parentId) use (&$buildTree, $grouped) {
+            return ($grouped[$parentId] ?? collect())->map(function($response) use (&$buildTree) {
+                $response->children = $buildTree($response->id);
+                return $response;
+            })->values();
+        };
+
+        $responsesTree = $buildTree(null);
+
+        // Agrega las respuestas anidadas al objeto publication
+        $publication->responses = $responsesTree;
 
         return Inertia::render('Publications/Show', [
             'publication' => $publication,
+             'authUser' => auth()->user(),
         ]);
     }
 

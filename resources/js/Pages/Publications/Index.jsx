@@ -1,31 +1,30 @@
 import React, { useState, useEffect } from "react";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import { Head, useForm, usePage } from "@inertiajs/react";
+import Swal from "sweetalert2";
 import {
     PaperAirplaneIcon,
     PhotographIcon,
     XIcon,
 } from "@heroicons/react/outline";
 
+const csrf = document.querySelector('meta[name="csrf-token"]');
+const csrfToken = csrf ? csrf.getAttribute("content") : "";
+
 export default function TwitterStyleFeed({
     authUser,
     publications: initialPublications,
 }) {
     const { props: pageProps } = usePage();
-    // Estados para el formulario
     const { data, setData, post, processing, errors, reset } = useForm(
         {
             textContent: "",
             image: null,
             preview: null,
         },
-        {
-            resetOnSuccess: false, // Importante para mantener el estado
-        }
+        { resetOnSuccess: false }
     );
     const [showForm, setShowForm] = useState(false);
-
-    // Estados para el scroll infinito
     const [publications, setPublications] = useState(
         initialPublications.data || initialPublications
     );
@@ -34,16 +33,13 @@ export default function TwitterStyleFeed({
     );
     const [loadingMore, setLoadingMore] = useState(false);
 
-    // Sincronizar con props iniciales
     useEffect(() => {
         setPublications(initialPublications.data);
         setNextPageUrl(initialPublications.next_page_url);
     }, [initialPublications]);
 
-    // Función para cargar más publicaciones
     const loadMorePublications = async () => {
         if (!nextPageUrl || loadingMore) return;
-
         setLoadingMore(true);
         try {
             const response = await fetch(nextPageUrl, {
@@ -52,44 +48,32 @@ export default function TwitterStyleFeed({
                     "X-Requested-With": "XMLHttpRequest",
                 },
             });
-
-            if (!response.ok) {
-                throw new Error("Network response was not ok");
-            }
-
+            if (!response.ok) throw new Error("Network response was not ok");
             const result = await response.json();
-
             setPublications((prev) => [...prev, ...result.data]);
             setNextPageUrl(result.next_page_url);
         } catch (error) {
-            console.error("Error loading more publications:", error);
+            Swal.fire("Error", "No se pudieron cargar más publicaciones.", "error");
         } finally {
             setLoadingMore(false);
         }
     };
 
-    // Efecto para el scroll infinito
     useEffect(() => {
         const handleScroll = () => {
-            const { scrollTop, scrollHeight, clientHeight } =
-                document.documentElement;
+            const { scrollTop, scrollHeight, clientHeight } = document.documentElement;
             const isNearBottom = scrollTop + clientHeight >= scrollHeight - 100;
-
             if (isNearBottom && nextPageUrl && !loadingMore) {
                 loadMorePublications();
             }
         };
-
         window.addEventListener("scroll", handleScroll);
         return () => window.removeEventListener("scroll", handleScroll);
     }, [nextPageUrl, publications, loadingMore]);
 
-    // Manejar selección de imagen
     const handleImageChange = (e) => {
         const file = e.target.files[0];
         setData("image", file);
-
-        // Mostrar previsualización
         if (file) {
             const reader = new FileReader();
             reader.onload = () => setData("preview", reader.result);
@@ -97,10 +81,42 @@ export default function TwitterStyleFeed({
         }
     };
 
-    // Enviar publicación
-    // Reemplaza tu handleSubmit con esta versión
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
+
+        Swal.fire({
+            title: "Validando contenido...",
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            },
+        });
+
+        console.log("Enviando a Gemini:", data.textContent);
+        try {
+            const geminiRes = await fetch("moderate-text", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-Requested-With": "XMLHttpRequest",
+                    "X-CSRF-TOKEN": csrfToken,
+                },
+                body: JSON.stringify({ text: data.textContent }),
+            });
+            console.log("Respuesta recibida de Gemini");
+            const geminiData = await geminiRes.json();
+            console.log("Datos de Gemini:", geminiData);
+            if (!geminiData.allowed) {
+                Swal.fire("Contenido bloqueado", geminiData.message || "Tu publicación contiene contenido ofensivo.", "warning");
+                return;
+            }
+        } catch (err) {
+            console.error("Error en fetch:", err);
+            Swal.fire("Error", "No se pudo validar el contenido. Intenta de nuevo.", "error");
+            return;
+        }
+
+        Swal.close();
 
         const formData = new FormData();
         formData.append("textContent", data.textContent);
@@ -108,7 +124,7 @@ export default function TwitterStyleFeed({
             formData.append("image", data.image);
         }
 
-        // Creación optimista
+        // Creación optimista (opcional)
         const optimisticPublication = {
             id: `temp-${Date.now()}`,
             textContent: data.textContent,
@@ -128,14 +144,11 @@ export default function TwitterStyleFeed({
             onSuccess: () => {
                 reset();
                 setData("preview", null);
-
-                // Usar pageProps en lugar de page
+                Swal.fire("¡Publicado!", "Tu publicación fue enviada correctamente.", "success");
                 if (pageProps.newPublication) {
                     setPublications((prev) => [
                         pageProps.newPublication,
-                        ...prev.filter(
-                            (p) => p.id !== optimisticPublication.id
-                        ),
+                        ...prev.filter((p) => p.id !== optimisticPublication.id),
                     ]);
                 }
             },
@@ -143,11 +156,38 @@ export default function TwitterStyleFeed({
                 setPublications((prev) =>
                     prev.filter((p) => p.id !== optimisticPublication.id)
                 );
+                Swal.fire("Error", "No se pudo publicar. Intenta de nuevo.", "error");
             },
         });
     };
 
-    // Formatear fecha
+    const handleLike = async (publicationId) => {
+        try {
+            const res = await fetch(`publications/${publicationId}/like`, {
+                method: "POST",
+                headers: {
+                    "X-CSRF-TOKEN": csrfToken,
+                    "X-Requested-With": "XMLHttpRequest",
+                    "Accept": "application/json",
+                },
+            });
+            const data = await res.json();
+            setPublications((prev) =>
+                prev.map((pub) =>
+                    pub.id === publicationId
+                        ? {
+                            ...pub,
+                            likedByMe: data.liked,
+                            likesCount: data.count,
+                        }
+                        : pub
+                )
+            );
+        } catch (e) {
+            Swal.fire("Error", "No se pudo actualizar el Me gusta.", "error");
+        }
+    };
+
     const formatDate = (dateString) => {
         const options = {
             day: "numeric",
@@ -350,65 +390,100 @@ export default function TwitterStyleFeed({
                                         )}
 
                                         <div className="mt-3 flex justify-between max-w-md">
-                                            <button className="flex items-center space-x-1 text-gray-500 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400 group">
-                                                <div className="p-2 rounded-full group-hover:bg-blue-50 dark:group-hover:bg-blue-900">
-                                                    <svg
-                                                        className="h-5 w-5"
-                                                        fill="none"
-                                                        viewBox="0 0 24 24"
-                                                        stroke="currentColor"
-                                                    >
-                                                        <path
-                                                            strokeLinecap="round"
-                                                            strokeLinejoin="round"
-                                                            strokeWidth={2}
-                                                            d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-                                                        />
-                                                    </svg>
-                                                </div>
-                                                <span className="text-sm">
-                                                    0
-                                                </span>
-                                            </button>
+                                           <button
+    type="button"
+    className="flex items-center space-x-1 text-gray-500 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400 group"
+    onClick={() => window.location.href = `publications/${publication.id}`}
+>
+    <div className="p-2 rounded-full group-hover:bg-blue-50 dark:group-hover:bg-blue-900">
+        <svg
+            className="h-5 w-5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+        >
+            <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+            />
+        </svg>
+    </div>
+    <span className="text-sm">
+        {publication.responsesCount ?? 0}
+    </span>
+</button>
+                                           <button
+    className={`flex items-center space-x-1 ${
+        publication.likedByMe ? "text-red-500" : "text-gray-500 dark:text-gray-300"
+    } hover:text-red-500 dark:hover:text-red-400 group`}
+    onClick={() => handleLike(publication.id)}
+>
+    <div className="p-2 rounded-full group-hover:bg-red-50 dark:group-hover:bg-red-900">
+        {publication.likedByMe ? (
+            // Corazón relleno
+            <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" />
+            </svg>
+        ) : (
+            // Corazón vacío
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+            </svg>
+        )}
+    </div>
+    <span className="text-sm">{publication.likesCount}</span>
+</button>
 
-                                            <button className="flex items-center space-x-1 text-gray-500 dark:text-gray-300 hover:text-red-500 dark:hover:text-red-400 group">
-                                                <div className="p-2 rounded-full group-hover:bg-red-50 dark:group-hover:bg-red-900">
-                                                    <svg
-                                                        className="h-5 w-5"
-                                                        fill="none"
-                                                        viewBox="0 0 24 24"
-                                                        stroke="currentColor"
-                                                    >
-                                                        <path
-                                                            strokeLinecap="round"
-                                                            strokeLinejoin="round"
-                                                            strokeWidth={2}
-                                                            d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                                                        />
-                                                    </svg>
-                                                </div>
-                                                <span className="text-sm">
-                                                    0
-                                                </span>
-                                            </button>
-
-                                            <button className="flex items-center text-gray-500 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400 group">
-                                                <div className="p-2 rounded-full group-hover:bg-blue-50 dark:group-hover:bg-blue-900">
-                                                    <svg
-                                                        className="h-5 w-5"
-                                                        fill="none"
-                                                        viewBox="0 0 24 24"
-                                                        stroke="currentColor"
-                                                    >
-                                                        <path
-                                                            strokeLinecap="round"
-                                                            strokeLinejoin="round"
-                                                            strokeWidth={2}
-                                                            d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
-                                                        />
-                                                    </svg>
-                                                </div>
-                                            </button>
+                                       <button
+    type="button"
+    className="flex items-center text-gray-500 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400 group"
+    onClick={() => {
+        if (!publication || !publication.id) {
+            Swal.fire("Error", "No se encontró la publicación.", "error");
+            return;
+        }
+        const url = `${window.location.origin}/publications/${publication.id}`;
+        if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+            navigator.clipboard.writeText(url).then(() => {
+                Swal.fire("¡Enlace copiado!", "El enlace de la publicación se ha copiado al portapapeles.", "success");
+            }).catch(() => {
+                Swal.fire("Error", "No se pudo copiar el enlace al portapapeles.", "error");
+            });
+        } else {
+            // Fallback: selecciona y copia usando un input temporal
+            const tempInput = document.createElement("input");
+            tempInput.value = url;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            try {
+                document.execCommand("copy");
+                Swal.fire("¡Enlace copiado!", "El enlace de la publicación se ha copiado al portapapeles.", "success");
+            } catch {
+                Swal.fire("Error", "No se pudo copiar el enlace al portapapeles.", "error");
+            }
+            document.body.removeChild(tempInput);
+        }
+    }}
+>
+    <div className="p-2 rounded-full group-hover:bg-blue-50 dark:group-hover:bg-blue-900">
+        <svg
+            className="h-5 w-5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+        >
+            <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
+            />
+        </svg>
+    </div>
+</button>
                                         </div>
                                     </div>
                                 </div>
