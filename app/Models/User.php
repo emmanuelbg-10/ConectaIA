@@ -133,4 +133,13 @@ class User extends Authenticatable // implements MustVerifyEmail (si aplica)
         // Tabla pivote 'followings', FK del modelo relacionado 'follower_id', FK de este modelo 'followed_id'
         return $this->belongsToMany(User::class, 'followings', 'followed_id', 'follower_id')->withTimestamps();
     }
+
+    public function likes() {
+    return $this->hasMany(Like::class);
+}
+
+public function responses()
+{
+    return $this->hasMany(\App\Models\Response::class);
+}
 }

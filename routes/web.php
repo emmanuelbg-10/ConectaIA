@@ -7,6 +7,9 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use App\Http\Controllers\PublicationController;
 use App\Http\Controllers\ChatController; // Asegúrate de importar tu controlador de chat
+use App\Http\Controllers\ModerationController;
+use App\Http\Controllers\LikeController;
+use App\Http\Controllers\ResponseController;
 
 Route::get('/', function () {
     return Inertia::render('Welcome', [
@@ -58,7 +61,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::post('/publications', [PublicationController::class, 'store'])
         ->name('publications.store');
-
-    // **Añade esta ruta para la página del chat**
-    Route::get('/chat', [ChatController::class, 'index'])->name('chat.index');
 });
+
+Route::get('/chat', [ChatController::class, 'index'])->name('chat.index');
+
+
+Route::post('/moderate-text', [ModerationController::class, 'moderate'])
+    ->middleware('auth')->name('moderate-text');
+
+Route::view('/moderate-test', 'moderate-test');
+
+Route::post('/publications/{publication}/like', [LikeController::class, 'toggle'])->middleware('auth');
+Route::get('/publications/{publication}', [PublicationController::class, 'show'])->name('publications.show');
+
+Route::post('/publications/{publication}/responses', [ResponseController::class, 'store'])->name('responses.store')->middleware('auth');
+Route::put('/responses/{response}', [ResponseController::class, 'update'])->name('responses.update')->middleware('auth');
+Route::delete('/responses/{response}', [ResponseController::class, 'destroy'])->name('responses.destroy')->middleware('auth');
