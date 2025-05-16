@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Spatie\Permission\Models\Role;
@@ -11,10 +12,34 @@ use Illuminate\Support\Facades\Redirect;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Inertia\Response;
 
+/**
+ * Manages user administration funcionalities
+ * 
+ * This controller handles the display, creation, updating,
+ * and banning/unbanning of users within the admin panel.
+ * It leverages Inertia.js for frontend rendering and Spatie's
+ * Laravel Permission package for role management.
+ */
 class AdminUserController extends Controller
 {
-    public function index(Request $request)
+    /**
+     * Display a paginated list of all users, including soft-deleted (banned) ones.
+     * 
+     * Retrieves users with their associated roles, ordered by name, and paginates the results.
+     * It also fetches all available roles for use in editing forms and passes user permissions
+     * to the frontend for conditional UI rendering
+     * 
+     * @param \Illuminate\Http\Request $request
+     * The incoming HTTP request.
+     * 
+     * @return \Inertia\Response
+     * Returns an Inertia response, rendering the 'Admin/Users/index' view
+     * with the user data, all available roles, the authenticated user,
+     * and specific user permisssions for editing banning and unbanning.
+     */
+    public function index(Request $request): Response
     {
         // Obtener usuarios, incluyendo los baneados (soft-deleted)
         $users = User::withTrashed()
@@ -37,7 +62,23 @@ class AdminUserController extends Controller
         ]);
     }
 
-    public function update(Request $request, User $user) // User se inyecta gracias a Route Model Binding
+    /**
+     * Update the specified user in storage.
+     *
+     * Validates the incoming request data, updates the user's attributes
+     * (name, email, password if provided), and synchronizes their roles.
+     * Prevents an administrator from removing their own 'administrator' role
+     * if they are the only administrator.
+     *
+     * @param  \Illuminate\Http\Request  $request 
+     * The incoming HTTP request containing user data.
+     * @param  \App\Models\User  $user 
+     * The user model instance to be updated (resolved via route model binding).
+     * 
+     * @return \Illuminate\Http\RedirectResponse
+     * Redirects to the user index page with a success or error message.
+     */
+    public function update(Request $request, User $user): RedirectResponse // User se inyecta gracias a Route Model Binding
     {
         // Validación (puedes mover esto a un FormRequest)
         $validated = $request->validate([
@@ -72,7 +113,21 @@ class AdminUserController extends Controller
         return Redirect::route('admin.users.index')->with('success', 'Usuario actualizado correctamente.');
     }
 
-    public function ban(Request $request, User $user)
+    /**
+     * Ban (soft delete) the specified user.
+     *
+     * Prevents a user from banning themselves and prevents the banning
+     * of the sole administrator.
+     *
+     * @param  \Illuminate\Http\Request  $request 
+     * The incoming HTTP request.
+     * @param  \App\Models\User  $user 
+     * The user model instance to be banned (resolved via route model binding).
+     * 
+     * @return \Illuminate\Http\RedirectResponse 
+     * Redirects to the user index page with a success or error message.
+     */
+    public function ban(Request $request, User $user): RedirectResponse
     {
         // No permitir banearse a sí mismo
         if ($user->id === $request->user()->id) {
@@ -94,7 +149,18 @@ class AdminUserController extends Controller
         return Redirect::route('admin.users.index')->with('success', 'Usuario baneado correctamente.');
     }
     
-     public function restore($user) 
+     /**
+     * Restore a soft-deleted (banned) user.
+     *
+     * Finds a user including those that are soft-deleted by their ID and restores them.
+     *
+     * @param  mixed  $user 
+     * The ID of the user to restore. Expects an ID that can be used with findOrFail.
+     * 
+     * @return \Illuminate\Http\RedirectResponse 
+     * Redirects to the user index page with a success message.
+     */ 
+     public function restore($user): RedirectResponse 
     {
        
         $user = User::withTrashed()->findOrFail($user);

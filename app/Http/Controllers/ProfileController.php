@@ -11,10 +11,27 @@ use Illuminate\Support\Facades\Redirect;
 use Inertia\Inertia;
 use Inertia\Response;
 
+/**
+ * Class related to the profile of a user.
+ * 
+ * This controller handles the editing, updating and deletion of a user's
+ * account. It uses Inertia.js for the rendering in the frontend, and Spatie's
+ * Laravel Permission package for role management.
+ */
 class ProfileController extends Controller
 {
     /**
      * Display the user's profile form.
+     * 
+     * Retrieves a user's info and displays it using Inertia.js, 
+     * so that the user is presented with a page showing only their information.
+     * 
+     * @param \Illuminate\Http\Request $request
+     * The incoming HTTP request.
+     * 
+     * @return \Inertia\Response
+     * Returns an Inertia response, rendering the 'Profile/Edit' view with
+     * that user's specific data.
      */
     public function edit(Request $request): Response
     {
@@ -26,6 +43,14 @@ class ProfileController extends Controller
 
     /**
      * Update the user's profile information.
+     * 
+     * Validates the incoming data, and then updates the user's information.
+     * 
+     * @param \App\Http\Requests\ProfileUpdateRequest $request
+     * The HTTP request for validating the new user's data.
+     * 
+     * @return \Illuminate\Http\RedirectResponse
+     * Redirects to the 'profile.edit' page to show the new data.
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
@@ -42,6 +67,18 @@ class ProfileController extends Controller
 
     /**
      * Delete the user's account.
+     * 
+     * This method allows a user to delete their account. For security reasons,
+     * it requests their password and the logs them out before deleting then to
+     * invalidate their token in the database, just so that it cannot be used without
+     * the account.
+     * 
+     * @param \Illuminate\Http\Request $request
+     * The HTTP request.
+     * 
+     * @return \Illuminate\Http\RedirectResponse
+     * Returns the user to the root directory, which in this case is the login/register
+     * page.
      */
     public function destroy(Request $request): RedirectResponse
     {
