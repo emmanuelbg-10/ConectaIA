@@ -17,13 +17,19 @@ class ModerationController extends Controller
         $text = $data['text'] ?? '';
 
         // Prompt personalizado para moderación
-        $prompt = "
-Eres un moderador de contenido para una red social. Analiza el siguiente texto y responde solo con 'PERMITIDO' si el contenido es apropiado, o 'BLOQUEADO' si contiene lenguaje ofensivo, discriminatorio, violento o inapropiado para una comunidad general. No expliques, solo responde con una de esas dos palabras.
+        $prompt = <<<EOT
+Eres un moderador de contenido para una red social. Analiza el siguiente texto y responde solo con:
+
+- 'PERMITIDO' si el contenido es apropiado.
+- 'BLOQUEADO: [motivo breve]' si el contenido contiene lenguaje ofensivo, discriminatorio, violento o inapropiado para una comunidad general. El motivo debe ser una frase muy corta y clara (máximo 10 palabras).
+
+No expliques nada más, responde exactamente en ese formato.
 
 ---
 Texto a analizar:
-\"$text\"
----";
+"$text"
+---
+EOT;
 
         $response = Http::withHeaders([
             'Content-Type' => 'application/json',
@@ -43,10 +49,15 @@ Texto a analizar:
             $responseData = $response->json();
             $geminiResult = $responseData['candidates'][0]['content']['parts'][0]['text'] ?? '';
 
-            $allowed = stripos($geminiResult, 'PERMITIDO') !== false;
-            $message = $allowed
-                ? 'Contenido permitido.'
-                : 'Tu publicación contiene contenido ofensivo o inapropiado.';
+            if (stripos($geminiResult, 'PERMITIDO') === 0) {
+                $allowed = true;
+                $message = 'Contenido permitido.';
+            } else {
+                $allowed = false;
+                // Extrae el motivo después de "BLOQUEADO:"
+                $motivo = trim(preg_replace('/^BLOQUEADO\s*:/i', '', $geminiResult));
+                $message = $motivo ?: 'Tu publicación contiene contenido ofensivo o inapropiado.';
+            }
 
             return response()->json([
                 'allowed' => $allowed,

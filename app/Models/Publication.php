@@ -63,8 +63,14 @@ class Publication extends Model
     /**
      * Las respuestas a esta publicación.
      */
-    public function replies(): HasMany
+      public function responses()
     {
-        return $this->hasMany(Publication::class, 'parent_publication_id');
+        return $this->hasMany(\App\Models\Response::class)->whereNull('parent_id');
     }
+
+    public function likes() {
+    return $this->hasMany(Like::class);
+}
+
+ 
 }
