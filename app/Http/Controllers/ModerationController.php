@@ -6,8 +6,30 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * Moderation through a large language model.
+ * 
+ * This controller's only purpose is to manage every single publication,
+ * response, message, etc... any social interaction by making sure it's
+ * considere appropiate according to our guidelines.
+ */
 class ModerationController extends Controller
 {
+    /**
+     * A method that uses AI to moderate social interactions.
+     * 
+     * This method uses the Gemini API to pass any text through it and analyze
+     * to determine if it's allowed to be posted or not with a custom prompt.
+     * It logs the response into 'laravel.logs' for auditing purposes and then
+     * returns a JSON with either a success or error message.
+     * 
+     * @param \Illuminate\Http\Request $request
+     * The HTTP request to call the Gemini API
+     * 
+     * @return \Illuminate\Http\JsonResponse
+     * It returns the "permitted/blocked" response from the Gemini API or an
+     * error message if the operation failed.
+     */
     public function moderate(Request $request)
     {
         Log::info('ModerationController called', $request->all());
