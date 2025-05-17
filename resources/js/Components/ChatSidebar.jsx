@@ -22,7 +22,7 @@ const ChatSidebar = ({ followers, onChatSelect }) => {
     };
 
     return (
-        <div className="w-full md:w-96 h-screen bg-white dark:bg-black border-l border-gray-200 dark:border-gray-800 z-40 overflow-y-auto shadow-lg">
+        <div className="w-full md:w-96 h-screen bg-white dark:bg-black border-l border-gray-200 dark:border-gray-800 z-40 overflow-y-auto ">
             {/* Header */}
             <div className="p-8 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-black">
                 <h2 className="text-xl font-bold text-[#214478] title">

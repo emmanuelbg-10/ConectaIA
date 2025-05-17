@@ -53,7 +53,11 @@ export default function TwitterStyleFeed({
             setPublications((prev) => [...prev, ...result.data]);
             setNextPageUrl(result.next_page_url);
         } catch (error) {
-            Swal.fire("Error", "No se pudieron cargar más publicaciones.", "error");
+            Swal.fire(
+                "Error",
+                "No se pudieron cargar más publicaciones.",
+                "error"
+            );
         } finally {
             setLoadingMore(false);
         }
@@ -61,7 +65,8 @@ export default function TwitterStyleFeed({
 
     useEffect(() => {
         const handleScroll = () => {
-            const { scrollTop, scrollHeight, clientHeight } = document.documentElement;
+            const { scrollTop, scrollHeight, clientHeight } =
+                document.documentElement;
             const isNearBottom = scrollTop + clientHeight >= scrollHeight - 100;
             if (isNearBottom && nextPageUrl && !loadingMore) {
                 loadMorePublications();
@@ -107,12 +112,21 @@ export default function TwitterStyleFeed({
             const geminiData = await geminiRes.json();
             console.log("Datos de Gemini:", geminiData);
             if (!geminiData.allowed) {
-                Swal.fire("Contenido bloqueado", geminiData.message || "Tu publicación contiene contenido ofensivo.", "warning");
+                Swal.fire(
+                    "Contenido bloqueado",
+                    geminiData.message ||
+                        "Tu publicación contiene contenido ofensivo.",
+                    "warning"
+                );
                 return;
             }
         } catch (err) {
             console.error("Error en fetch:", err);
-            Swal.fire("Error", "No se pudo validar el contenido. Intenta de nuevo.", "error");
+            Swal.fire(
+                "Error",
+                "No se pudo validar el contenido. Intenta de nuevo.",
+                "error"
+            );
             return;
         }
 
@@ -144,11 +158,17 @@ export default function TwitterStyleFeed({
             onSuccess: () => {
                 reset();
                 setData("preview", null);
-                Swal.fire("¡Publicado!", "Tu publicación fue enviada correctamente.", "success");
+                Swal.fire(
+                    "¡Publicado!",
+                    "Tu publicación fue enviada correctamente.",
+                    "success"
+                );
                 if (pageProps.newPublication) {
                     setPublications((prev) => [
                         pageProps.newPublication,
-                        ...prev.filter((p) => p.id !== optimisticPublication.id),
+                        ...prev.filter(
+                            (p) => p.id !== optimisticPublication.id
+                        ),
                     ]);
                 }
             },
@@ -156,7 +176,11 @@ export default function TwitterStyleFeed({
                 setPublications((prev) =>
                     prev.filter((p) => p.id !== optimisticPublication.id)
                 );
-                Swal.fire("Error", "No se pudo publicar. Intenta de nuevo.", "error");
+                Swal.fire(
+                    "Error",
+                    "No se pudo publicar. Intenta de nuevo.",
+                    "error"
+                );
             },
         });
     };
@@ -168,7 +192,7 @@ export default function TwitterStyleFeed({
                 headers: {
                     "X-CSRF-TOKEN": csrfToken,
                     "X-Requested-With": "XMLHttpRequest",
-                    "Accept": "application/json",
+                    Accept: "application/json",
                 },
             });
             const data = await res.json();
@@ -176,10 +200,10 @@ export default function TwitterStyleFeed({
                 prev.map((pub) =>
                     pub.id === publicationId
                         ? {
-                            ...pub,
-                            likedByMe: data.liked,
-                            likesCount: data.count,
-                        }
+                              ...pub,
+                              likedByMe: data.liked,
+                              likesCount: data.count,
+                          }
                         : pub
                 )
             );
@@ -214,11 +238,6 @@ export default function TwitterStyleFeed({
             {/* Área para crear nueva publicación (siempre visible) */}
             <div className="border-b border-gray-200 dark:border-gray-700 p-4">
                 <div className="flex space-x-3">
-                    <img
-                        src={authUser.profile_photo_url}
-                        alt={authUser.name}
-                        className="h-12 w-12 rounded-full object-cover flex-shrink-0"
-                    />
                     <div className="flex-1">
                         <button
                             onClick={() => setShowForm(true)}
@@ -249,11 +268,17 @@ export default function TwitterStyleFeed({
 
                         <form onSubmit={handleSubmit} className="p-4">
                             <div className="flex space-x-3">
-                                <img
-                                    src={authUser.profile_photo_url}
-                                    alt={authUser.name}
-                                    className="h-12 w-12 rounded-full object-cover flex-shrink-0"
-                                />
+                                {authUser.avatarURL ? (
+                                    <img
+                                        src={authUser.avatarURL}
+                                        alt={authUser.name}
+                                        className="h-12 w-12 rounded-full object-cover"
+                                    />
+                                ) : (
+                                    <div className="h-12 w-12 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-lg font-semibold text-gray-700 dark:text-gray-300">
+                                        {authUser.name.charAt(0).toUpperCase()}
+                                    </div>
+                                )}
                                 <div className="flex-1">
                                     <textarea
                                         value={data.textContent}
@@ -352,15 +377,19 @@ export default function TwitterStyleFeed({
                                 className="p-4 hover:bg-gray-50 dark:hover:bg-gray-900 transition"
                             >
                                 <div className="flex space-x-3">
-                                    <img
-                                        src={
-                                            publication.user
-                                                .profile_photo_url ||
-                                            "/default-user.png"
-                                        }
-                                        alt={publication.user.name}
-                                        className="h-12 w-12 rounded-full object-cover"
-                                    />
+                                    {publication.user.avatarURL ? (
+                                        <img
+                                            src={publication.user.avatarURL}
+                                            alt={publication.user.name}
+                                            className="h-12 w-12 rounded-full object-cover"
+                                        />
+                                    ) : (
+                                        <div className="h-12 w-12 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-lg font-semibold text-gray-700 dark:text-gray-300">
+                                            {publication.user.name
+                                                .charAt(0)
+                                                .toUpperCase()}
+                                        </div>
+                                    )}
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center space-x-1">
                                             <p className="font-bold truncate text-gray-900 dark:text-gray-100">
@@ -390,100 +419,163 @@ export default function TwitterStyleFeed({
                                         )}
 
                                         <div className="mt-3 flex justify-between max-w-md">
-                                           <button
-    type="button"
-    className="flex items-center space-x-1 text-gray-500 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400 group"
-    onClick={() => window.location.href = `publications/${publication.id}`}
->
-    <div className="p-2 rounded-full group-hover:bg-blue-50 dark:group-hover:bg-blue-900">
-        <svg
-            className="h-5 w-5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-        >
-            <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-            />
-        </svg>
-    </div>
-    <span className="text-sm">
-        {publication.responsesCount ?? 0}
-    </span>
-</button>
-                                           <button
-    className={`flex items-center space-x-1 ${
-        publication.likedByMe ? "text-red-500" : "text-gray-500 dark:text-gray-300"
-    } hover:text-red-500 dark:hover:text-red-400 group`}
-    onClick={() => handleLike(publication.id)}
->
-    <div className="p-2 rounded-full group-hover:bg-red-50 dark:group-hover:bg-red-900">
-        {publication.likedByMe ? (
-            // Corazón relleno
-            <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" />
-            </svg>
-        ) : (
-            // Corazón vacío
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                    d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-            </svg>
-        )}
-    </div>
-    <span className="text-sm">{publication.likesCount}</span>
-</button>
+                                            <button
+                                                type="button"
+                                                className="flex items-center space-x-1 text-gray-500 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400 group"
+                                                onClick={() =>
+                                                    (window.location.href = `publications/${publication.id}`)
+                                                }
+                                            >
+                                                <div className="p-2 rounded-full group-hover:bg-blue-50 dark:group-hover:bg-blue-900">
+                                                    <svg
+                                                        className="h-5 w-5"
+                                                        fill="none"
+                                                        viewBox="0 0 24 24"
+                                                        stroke="currentColor"
+                                                    >
+                                                        <path
+                                                            strokeLinecap="round"
+                                                            strokeLinejoin="round"
+                                                            strokeWidth={2}
+                                                            d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                                                        />
+                                                    </svg>
+                                                </div>
+                                                <span className="text-sm">
+                                                    {publication.responsesCount ??
+                                                        0}
+                                                </span>
+                                            </button>
+                                            <button
+                                                className={`flex items-center space-x-1 ${
+                                                    publication.likedByMe
+                                                        ? "text-red-500"
+                                                        : "text-gray-500 dark:text-gray-300"
+                                                } hover:text-red-500 dark:hover:text-red-400 group`}
+                                                onClick={() =>
+                                                    handleLike(publication.id)
+                                                }
+                                            >
+                                                <div className="p-2 rounded-full group-hover:bg-red-50 dark:group-hover:bg-red-900">
+                                                    {publication.likedByMe ? (
+                                                        // Corazón relleno
+                                                        <svg
+                                                            className="h-5 w-5"
+                                                            fill="currentColor"
+                                                            viewBox="0 0 20 20"
+                                                        >
+                                                            <path d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" />
+                                                        </svg>
+                                                    ) : (
+                                                        // Corazón vacío
+                                                        <svg
+                                                            className="h-5 w-5"
+                                                            fill="none"
+                                                            stroke="currentColor"
+                                                            viewBox="0 0 24 24"
+                                                        >
+                                                            <path
+                                                                strokeLinecap="round"
+                                                                strokeLinejoin="round"
+                                                                strokeWidth={2}
+                                                                d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                                                            />
+                                                        </svg>
+                                                    )}
+                                                </div>
+                                                <span className="text-sm">
+                                                    {publication.likesCount}
+                                                </span>
+                                            </button>
 
-                                       <button
-    type="button"
-    className="flex items-center text-gray-500 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400 group"
-    onClick={() => {
-        if (!publication || !publication.id) {
-            Swal.fire("Error", "No se encontró la publicación.", "error");
-            return;
-        }
-        const url = `${window.location.origin}/publications/${publication.id}`;
-        if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
-            navigator.clipboard.writeText(url).then(() => {
-                Swal.fire("¡Enlace copiado!", "El enlace de la publicación se ha copiado al portapapeles.", "success");
-            }).catch(() => {
-                Swal.fire("Error", "No se pudo copiar el enlace al portapapeles.", "error");
-            });
-        } else {
-            // Fallback: selecciona y copia usando un input temporal
-            const tempInput = document.createElement("input");
-            tempInput.value = url;
-            document.body.appendChild(tempInput);
-            tempInput.select();
-            try {
-                document.execCommand("copy");
-                Swal.fire("¡Enlace copiado!", "El enlace de la publicación se ha copiado al portapapeles.", "success");
-            } catch {
-                Swal.fire("Error", "No se pudo copiar el enlace al portapapeles.", "error");
-            }
-            document.body.removeChild(tempInput);
-        }
-    }}
->
-    <div className="p-2 rounded-full group-hover:bg-blue-50 dark:group-hover:bg-blue-900">
-        <svg
-            className="h-5 w-5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-        >
-            <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
-            />
-        </svg>
-    </div>
-</button>
+                                            <button
+                                                type="button"
+                                                className="flex items-center text-gray-500 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400 group"
+                                                onClick={() => {
+                                                    if (
+                                                        !publication ||
+                                                        !publication.id
+                                                    ) {
+                                                        Swal.fire(
+                                                            "Error",
+                                                            "No se encontró la publicación.",
+                                                            "error"
+                                                        );
+                                                        return;
+                                                    }
+                                                    const url = `${window.location.origin}/publications/${publication.id}`;
+                                                    if (
+                                                        navigator.clipboard &&
+                                                        typeof navigator
+                                                            .clipboard
+                                                            .writeText ===
+                                                            "function"
+                                                    ) {
+                                                        navigator.clipboard
+                                                            .writeText(url)
+                                                            .then(() => {
+                                                                Swal.fire(
+                                                                    "¡Enlace copiado!",
+                                                                    "El enlace de la publicación se ha copiado al portapapeles.",
+                                                                    "success"
+                                                                );
+                                                            })
+                                                            .catch(() => {
+                                                                Swal.fire(
+                                                                    "Error",
+                                                                    "No se pudo copiar el enlace al portapapeles.",
+                                                                    "error"
+                                                                );
+                                                            });
+                                                    } else {
+                                                        // Fallback: selecciona y copia usando un input temporal
+                                                        const tempInput =
+                                                            document.createElement(
+                                                                "input"
+                                                            );
+                                                        tempInput.value = url;
+                                                        document.body.appendChild(
+                                                            tempInput
+                                                        );
+                                                        tempInput.select();
+                                                        try {
+                                                            document.execCommand(
+                                                                "copy"
+                                                            );
+                                                            Swal.fire(
+                                                                "¡Enlace copiado!",
+                                                                "El enlace de la publicación se ha copiado al portapapeles.",
+                                                                "success"
+                                                            );
+                                                        } catch {
+                                                            Swal.fire(
+                                                                "Error",
+                                                                "No se pudo copiar el enlace al portapapeles.",
+                                                                "error"
+                                                            );
+                                                        }
+                                                        document.body.removeChild(
+                                                            tempInput
+                                                        );
+                                                    }
+                                                }}
+                                            >
+                                                <div className="p-2 rounded-full group-hover:bg-blue-50 dark:group-hover:bg-blue-900">
+                                                    <svg
+                                                        className="h-5 w-5"
+                                                        fill="none"
+                                                        viewBox="0 0 24 24"
+                                                        stroke="currentColor"
+                                                    >
+                                                        <path
+                                                            strokeLinecap="round"
+                                                            strokeLinejoin="round"
+                                                            strokeWidth={2}
+                                                            d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
+                                                        />
+                                                    </svg>
+                                                </div>
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
