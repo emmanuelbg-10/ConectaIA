@@ -7,43 +7,41 @@ use App\Models\Hashtag;
 use App\Models\Mention;
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
+use CloudinaryLabs\CloudinaryLaravel\Facades\Cloudinary;
 
 class PublicationController extends Controller
 {
     /**
      * Mostrar todas las publicaciones.
      */
-public function index(Request $request)
-{
-    $publications = Publication::with(['user', 'hashtags'])
-        ->latest()
-        ->paginate(10);
+    public function index(Request $request)
+    {
+        $publications = Publication::with(['user', 'hashtags'])
+            ->latest()
+            ->paginate(10);
 
-    // Mapea cada publicación para agregar likesCount y likedByMe
-    $publications->getCollection()->transform(function ($publication) use ($request) {
-        $publication->likesCount = $publication->likes()->count();
-        $publication->responsesCount = $publication->responses()->count();
-        $publication->likedByMe = $request->user()
-            ? $publication->likes()->where('user_id', $request->user()->id)->exists()
-            : false;
-        return $publication;
-    });
+        $publications->getCollection()->transform(function ($publication) use ($request) {
+            $publication->likesCount = $publication->likes()->count();
+            $publication->responsesCount = $publication->responses()->count();
+            $publication->likedByMe = $request->user()
+                ? $publication->likes()->where('user_id', $request->user()->id)->exists()
+                : false;
+            return $publication;
+        });
 
-    // Solo responde JSON si la petición es AJAX Y NO es una petición Inertia
-    if ($request->ajax() && !$request->header('X-Inertia')) {
-        return response()->json([
-            'data' => $publications->items(),
-            'next_page_url' => $publications->nextPageUrl()
+        if ($request->ajax() && !$request->header('X-Inertia')) {
+            return response()->json([
+                'data' => $publications->items(),
+                'next_page_url' => $publications->nextPageUrl()
+            ]);
+        }
+
+        return Inertia::render('Publications/Index', [
+            'authUser' => auth()->user(),
+            'publications' => $publications,
         ]);
     }
-
-    return Inertia::render('Publications/Index', [
-        'authUser' => auth()->user(),
-        'publications' => $publications,
-    ]);
-}
 
     /**
      * Mostrar el formulario para crear una nueva publicación.
@@ -56,63 +54,36 @@ public function index(Request $request)
     /**
      * Guardar una nueva publicación.
      */
-public function store(Request $request)
-{
-    $validated = $request->validate([
-        'textContent' => 'required|string|max:500',
-        'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-    ]);
-
-    // Procesar imagen
-    $imageURL = null;
-    if ($request->hasFile('image')) {
-        $path = $request->file('image')->store('publications', 'public');
-        $imageURL = Storage::url($path);
-    }
-
-    $publication = Publication::create([
-        'user_id' => auth()->id(),
-        'textContent' => $validated['textContent'],
-        'imageURL' => $imageURL,
-    ])->load('user', 'hashtags');
-
-    // Respuesta para Inertia
-    return back()->with([
-        'success' => 'Publicación creada con éxito',
-        'newPublication' => $publication
-    ]);
-}
-    /**
-     * Mostrar una publicación específica.
-     */
-    public function show(Publication $publication)
+    public function store(Request $request)
     {
-        $publication->load('user');
+        $validated = $request->validate([
+            'textContent' => 'required|string|max:500',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+        ]);
 
-        // Trae TODAS las respuestas de la publicación (no solo las principales)
-        $responses = \App\Models\Response::where('publication_id', $publication->id)
-            ->with('user')
-            ->get();
+        $imageURL = null;
 
-        // Agrupa por parent_id
-        $grouped = $responses->groupBy('parent_id');
+        if ($request->hasFile('image')) {
+            $uploadedFile = $request->file('image');
+        
+            $uploaded = Cloudinary::uploadApi()->upload($uploadedFile->getRealPath(), [
+                'resource_type' => 'image',
+            ]);
+            
+        
+            $imageURL = $uploaded['secure_url'];
+        }
+        
 
-        // Función recursiva para anidar
-        $buildTree = function($parentId) use (&$buildTree, $grouped) {
-            return ($grouped[$parentId] ?? collect())->map(function($response) use (&$buildTree) {
-                $response->children = $buildTree($response->id);
-                return $response;
-            })->values();
-        };
+        $publication = Publication::create([
+            'user_id' => auth()->id(),
+            'textContent' => $validated['textContent'],
+            'imageURL' => $imageURL,
+        ])->load('user', 'hashtags');
 
-        $responsesTree = $buildTree(null);
-
-        // Agrega las respuestas anidadas al objeto publication
-        $publication->responses = $responsesTree;
-
-        return Inertia::render('Publications/Show', [
-            'publication' => $publication,
-             'authUser' => auth()->user(),
+        return back()->with([
+            'success' => 'Publicación creada con éxito',
+            'newPublication' => $publication,
         ]);
     }
 
@@ -140,7 +111,6 @@ public function store(Request $request)
 
         $publication->update($request->only('textContent', 'imageURL'));
 
-        // Actualizar hashtags
         $publication->hashtags()->detach();
         if ($request->hashtags) {
             $hashtags = explode(',', $request->hashtags);
@@ -150,7 +120,6 @@ public function store(Request $request)
             }
         }
 
-        // Actualizar menciones
         Mention::where('publication_id', $publication->id)->delete();
         if ($request->mentions) {
             $mentions = explode(',', $request->mentions);
