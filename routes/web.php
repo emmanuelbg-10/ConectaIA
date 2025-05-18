@@ -11,6 +11,7 @@ use App\Http\Controllers\ModerationController;
 use App\Http\Controllers\LikeController;
 use App\Http\Controllers\ResponseController;
 
+
 Route::get('/', function () {
     return Inertia::render('Welcome', [
         'canLogin' => Route::has('login'),
@@ -77,3 +78,7 @@ Route::get('/publications/{publication}', [PublicationController::class, 'show']
 Route::post('/publications/{publication}/responses', [ResponseController::class, 'store'])->name('responses.store')->middleware('auth');
 Route::put('/responses/{response}', [ResponseController::class, 'update'])->name('responses.update')->middleware('auth');
 Route::delete('/responses/{response}', [ResponseController::class, 'destroy'])->name('responses.destroy')->middleware('auth');
+
+Route::get('/notifications', function () {
+    return Inertia::render('Notifications/Index');
+})->name('notifications.index')->middleware(['auth']);
