@@ -46,12 +46,18 @@ export default function AuthenticatedLayout({ children, followers }) {
                 <NavLink href="/search" icon={FiSearch} label="Search" />
                 <NavLink href="/notifications" icon={FiBell} label="Alerts" />
                 <NavLink
-                    href={route("profile.edit")}
+                    href={route("profile")}
                     icon={FiUser}
                     label="Profile"
-                    active={route().current("profile.edit")}
+                    active={route().current("profile")}
                 />
-                <NavLink href="/settings" icon={FiSettings} label="Settings" />
+                <NavLink
+                    href={route("settings.edit")}
+                    icon={FiSettings}
+                    label="Settings"
+                    active={route().current("settings.edit")}
+                />
+
                 {isMobileChat && (
                     <NavLink
                         href={route("chat.index")}
@@ -78,10 +84,12 @@ export default function AuthenticatedLayout({ children, followers }) {
                             Alerts
                         </ResponsiveNavLink>
                         <ResponsiveNavLink href={route("chat.index")}>
-                            {/* Enlace al chat completo en móvil */}
                             People
                         </ResponsiveNavLink>
-                        <ResponsiveNavLink href="/settings">
+                        <ResponsiveNavLink
+                            href={route("settings.edit")}
+                            active={route().current("settings.edit")}
+                        >
                             Settings
                         </ResponsiveNavLink>
                     </div>
@@ -117,24 +125,25 @@ export default function AuthenticatedLayout({ children, followers }) {
                         <ApplicationLogo className="h-8 w-8 text-black dark:text-white" />
                     </Link>
                     <NavLink
-                        href={route("profile.edit")}
+                        href={route("profile")}
                         icon={FiUser}
                         label="Profile"
-                        active={route().current("profile.edit")}
+                        active={route().current("profile")}
                     />
                     <NavLink
                         href={route("chat.index")}
                         icon={FiUsers}
                         label="People"
-                    />{" "}
-                    {/* Botón en la nav inferior */}
+                    />
                     <NavLink
-                        href="/settings"
+                        href={route("settings.edit")}
                         icon={FiSettings}
                         label="Settings"
+                        active={route().current("settings.edit")}
                     />
                 </nav>
             </div>
+
             {!isMobileChat && (
                 <div className="hidden md:block sticky top-0 right-0 h-screen z-30 w-96 max-w-[100vw]">
                     <ChatSidebar

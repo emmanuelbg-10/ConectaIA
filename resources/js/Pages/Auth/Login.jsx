@@ -23,7 +23,7 @@ export default function Login({ status, canResetPassword }) {
 
     return (
         <GuestLayout>
-            <Head title="Log in" />
+            <Head title="Inicia Sesión" />
 
             {status && (
                 <div className="mb-4 text-sm font-medium text-green-600">
@@ -95,6 +95,19 @@ export default function Login({ status, canResetPassword }) {
                     </PrimaryButton>
                 </div>
             </form>
+
+            {/* Enlace a registro */}
+            <div className="mt-6 text-center">
+                <p className="text-sm text-white dark:text-white">
+                    ¿No tienes una cuenta?{" "}
+                    <Link
+                        href={route("register")}
+                        className="underline text-blue-400 hover:text-blue-600"
+                    >
+                        Regístrate
+                    </Link>
+                </p>
+            </div>
         </GuestLayout>
     );
 }

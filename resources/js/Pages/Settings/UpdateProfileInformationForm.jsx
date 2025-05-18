@@ -3,7 +3,6 @@ import InputLabel from "@/Components/InputLabel";
 import PrimaryButton from "@/Components/PrimaryButton";
 import TextInput from "@/Components/TextInput";
 import { Transition } from "@headlessui/react";
-import LogoutButton from "@/Components/LogoutButton";
 
 import { Link, useForm, usePage } from "@inertiajs/react";
 
@@ -23,7 +22,7 @@ export default function UpdateProfileInformation({
     const submit = (e) => {
         e.preventDefault();
 
-        patch(route("profile.update"));
+        patch(route("settings.update"));
     };
 
     return (
@@ -101,8 +100,6 @@ export default function UpdateProfileInformation({
                         <PrimaryButton disabled={processing}>
                             Guardar
                         </PrimaryButton>
-
-                        <LogoutButton></LogoutButton>
                     </div>
 
                     <Transition
