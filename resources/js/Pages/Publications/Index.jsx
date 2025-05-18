@@ -7,6 +7,7 @@ import {
     PhotographIcon,
     XIcon,
 } from "@heroicons/react/outline";
+import UserMenu from "@/Components/UserMenu";
 
 const csrf = document.querySelector('meta[name="csrf-token"]');
 const csrfToken = csrf ? csrf.getAttribute("content") : "";
@@ -14,6 +15,8 @@ const csrfToken = csrf ? csrf.getAttribute("content") : "";
 export default function TwitterStyleFeed({
     authUser,
     publications: initialPublications,
+    friends,
+    followers,
 }) {
     const { props: pageProps } = usePage();
     const { data, setData, post, processing, errors, reset } = useForm(
@@ -198,9 +201,14 @@ export default function TwitterStyleFeed({
         return new Date(dateString).toLocaleDateString("es-ES", options);
     };
 
+ 
+    console.log("is_admin:", authUser.is_admin, "is_moderator:", authUser.is_moderator);
+
     return (
         <AuthenticatedLayout
-            user={authUser}
+            authUser={authUser}
+            friends={friends}
+            followers={followers}
             header={
                 <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 z-10">
                     <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">
@@ -366,13 +374,35 @@ export default function TwitterStyleFeed({
                                             <p className="font-bold truncate text-gray-900 dark:text-gray-100">
                                                 {publication.user.name}
                                             </p>
+                                           
+                                                <UserMenu
+                                                    userId={publication.user.id}
+                                                    publicationId={publication.id}
+                                                    isOwner={authUser.id === publication.user.id}
+                                                    isAdmin={authUser.is_admin || authUser.is_moderator}
+                                                    friendStatus={publication.friend_status || "none"}
+                                                    following={publication.following || false}
+                                                    onToggleFollow={(userId, following) => {
+                                                        setPublications((prev) =>
+                                                            prev.map((pub) =>
+                                                                pub.user.id === userId
+                                                                    ? { ...pub, following }
+                                                                    : pub
+                                                            )
+                                                        );
+                                                    }}
+                                                    onDeletePublication={(publicationId) => {
+                                                        setPublications((prev) =>
+                                                            prev.filter((pub) => pub.id !== publicationId)
+                                                        );
+                                                    }}
+                                                />
+                                           
                                             <span className="text-gray-500 dark:text-gray-400">
                                                 ·
                                             </span>
                                             <p className="text-gray-500 dark:text-gray-400 text-sm">
-                                                {formatDate(
-                                                    publication.created_at
-                                                )}
+                                                {formatDate(publication.created_at)}
                                             </p>
                                         </div>
                                         <p className="mt-1 text-gray-900 dark:text-gray-100 whitespace-pre-line">

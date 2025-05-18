@@ -10,6 +10,9 @@ use App\Http\Controllers\ChatController; // Asegúrate de importar tu controlado
 use App\Http\Controllers\ModerationController;
 use App\Http\Controllers\LikeController;
 use App\Http\Controllers\ResponseController;
+use App\Http\Controllers\FriendshipController;
+use App\Http\Controllers\FollowController;
+use App\Http\Controllers\MessageController; // Asegúrate de importar tu controlador de mensajes
 
 Route::get('/', function () {
     return Inertia::render('Welcome', [
@@ -77,3 +80,21 @@ Route::get('/publications/{publication}', [PublicationController::class, 'show']
 Route::post('/publications/{publication}/responses', [ResponseController::class, 'store'])->name('responses.store')->middleware('auth');
 Route::put('/responses/{response}', [ResponseController::class, 'update'])->name('responses.update')->middleware('auth');
 Route::delete('/responses/{response}', [ResponseController::class, 'destroy'])->name('responses.destroy')->middleware('auth');
+
+Route::middleware('auth')->group(function () {
+    Route::post('/friendships/send/{receiver_id}', [FriendshipController::class, 'sendRequest']);
+    Route::post('/friendships/accept/{id}', [FriendshipController::class, 'acceptRequest']);
+    Route::post('/friendships/reject/{id}', [FriendshipController::class, 'rejectRequest']);
+    Route::get('/friendships/received', [FriendshipController::class, 'receivedRequests']);
+    Route::get('/friendships/sent', [FriendshipController::class, 'sentRequests']);
+});
+
+Route::middleware('auth')->post('/follow/{userId}', [FollowController::class, 'toggle']);
+Route::delete('/publications/{publication}', [PublicationController::class, 'destroy'])
+    ->middleware('auth');
+
+Route::get('/alerts', [App\Http\Controllers\AlertController::class, 'index'])->middleware('auth');
+Route::get('/alerts/data', [App\Http\Controllers\AlertController::class, 'index'])->middleware('auth');
+
+Route::middleware('auth')->get('/messages/{friendId}', [MessageController::class, 'conversation']);
+Route::post('/messages/send', [MessageController::class, 'send'])->middleware('auth');

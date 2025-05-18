@@ -7,6 +7,7 @@ use App\Models\Hashtag;
 use App\Models\Mention;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
@@ -39,9 +40,55 @@ public function index(Request $request)
         ]);
     }
 
+    $authUserId = $request->user() ? $request->user()->id : null;
+
+    // Agregar información de amistad para cada publicación
+    foreach ($publications as $pub) {
+        $friendship = \App\Models\Friendship::where(function($q) use ($pub, $authUserId) {
+            $q->where('sender_id', $authUserId)->where('receiver_id', $pub->user_id);
+        })->orWhere(function($q) use ($pub, $authUserId) {
+            $q->where('sender_id', $pub->user_id)->where('receiver_id', $authUserId);
+        })->first();
+
+        $pub->friend_status = $friendship ? $friendship->status : 'none';
+
+        $following = \App\Models\Following::where('follower_id', $authUserId)
+            ->where('followed_id', $pub->user_id)
+            ->exists();
+
+        $pub->following = $following;
+    }
+
+    $user = auth()->user();
+
+    // Amigos donde el usuario es sender o receiver y la amistad está aceptada
+    $friends = \App\Models\User::whereIn('id', function($query) use ($user) {
+        $query->select('receiver_id')
+            ->from('friendships')
+            ->where('sender_id', $user->id)
+            ->where('status', 'accepted');
+    })
+    ->orWhereIn('id', function($query) use ($user) {
+        $query->select('sender_id')
+            ->from('friendships')
+            ->where('receiver_id', $user->id)
+            ->where('status', 'accepted');
+    })
+    ->get(['id', 'name', 'profile_photo_url']);
+
+    Log::info('Amigos encontrados:', $friends->toArray());
+
     return Inertia::render('Publications/Index', [
-        'authUser' => auth()->user(),
+        'authUser' => [
+            'id' => auth()->id(),
+            'name' => auth()->user()->name,
+            'profile_photo_url' => auth()->user()->profile_photo_url,
+            'is_admin' => auth()->user()->hasRole('administrador'),
+            'is_moderator' => auth()->user()->hasRole('moderador'),
+            // ...otros campos que necesites
+        ],
         'publications' => $publications,
+        'friends' => $friends,
     ]);
 }
 
@@ -173,8 +220,11 @@ public function store(Request $request)
      */
     public function destroy(Publication $publication)
     {
-        $publication->delete();
-
-        return redirect()->route('publications.index')->with('success', 'Publicación eliminada con éxito.');
+        $user = auth()->user();
+        if ($user->id === $publication->user_id || $user->role === 'admin' || $user->role === 'moderator') {
+            $publication->delete();
+            return response()->json(['success' => true]);
+        }
+        return response()->json(['error' => 'No autorizado'], 403);
     }
 }
