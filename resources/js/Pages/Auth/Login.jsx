@@ -74,7 +74,7 @@ export default function Login({ status, canResetPassword }) {
                                 setData("remember", e.target.checked)
                             }
                         />
-                        <span className="ms-2 text-sm text-white dark:text-white">
+                        <span className="ms-2 text-sm dark:text-white">
                             Recordar
                         </span>
                     </label>
@@ -98,11 +98,11 @@ export default function Login({ status, canResetPassword }) {
 
             {/* Enlace a registro */}
             <div className="mt-6 text-center">
-                <p className="text-sm text-white dark:text-white">
+                <p className="text-sm dark:text-white">
                     ¿No tienes una cuenta?{" "}
                     <Link
                         href={route("register")}
-                        className="underline text-blue-400 hover:text-blue-600"
+                        className="underline text-[#214478]  hover:text-blue-600"
                     >
                         Regístrate
                     </Link>

@@ -146,4 +146,11 @@ class PublicationController extends Controller
 
         return redirect()->route('publications.index')->with('success', 'Publicación eliminada con éxito.');
     }
+
+    public function show(Publication $publication)
+{
+    return Inertia::render('Publications/Show', [
+        'publication' => $publication->load(['user', 'hashtags', 'mentions.user']),
+    ]);
+}
 }
