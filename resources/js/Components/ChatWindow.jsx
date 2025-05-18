@@ -1,4 +1,14 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import Echo from 'laravel-echo';
+import Pusher from 'pusher-js';
+
+window.Pusher = Pusher;
+window.Echo = new Echo({
+  broadcaster: 'pusher',
+  key: 'fe9bb49ebd480f64f723',
+  cluster: 'eu',
+  forceTLS: true,
+});
 
 // El componente ChatWindow recibe las props: selectedChat, messages, currentUserId y onClose
 const ChatWindow = ({ selectedChat, messages, currentUserId, onClose, setMessages }) => {
@@ -6,6 +16,20 @@ const ChatWindow = ({ selectedChat, messages, currentUserId, onClose, setMessage
 
     // Si no hay un chat seleccionado, no renderiza nada
     if (!selectedChat) return null;
+
+    // Refresca los mensajes cada 2 segundos
+    useEffect(() => {
+        if (!selectedChat) return;
+        const interval = setInterval(async () => {
+            const res = await fetch(`/messages/${selectedChat.id}`);
+            if (res.ok) {
+                const msgs = await res.json();
+                setMessages(msgs);
+            }
+        }, 2000);
+
+        return () => clearInterval(interval);
+    }, [selectedChat, setMessages]);
 
     // Función para enviar el mensaje
     const handleSend = async () => {
@@ -30,6 +54,23 @@ const ChatWindow = ({ selectedChat, messages, currentUserId, onClose, setMessage
             setNewMessage("");
         }
     };
+
+    useEffect(() => {
+        if (!selectedChat) return;
+
+        console.log('Suscribiendo a:', `chat.${currentUserId}`);
+        console.log('currentUserId en ChatWindow:', currentUserId);
+
+        window.Echo.channel(`chat.${currentUserId}`)
+          .listen('MessageSent', (e) => {
+            console.log('Evento recibido:', e);
+            setMessages(prev => [...prev, e.message]);
+          });
+
+        return () => {
+            window.Echo.leave(`chat.${currentUserId}`);
+        };
+    }, [selectedChat, currentUserId]);
 
     return (
         <div className="flex flex-col h-full bg-white dark:bg-black">
@@ -68,7 +109,7 @@ const ChatWindow = ({ selectedChat, messages, currentUserId, onClose, setMessage
 
             {/* Mensajes */}
             <div className="flex-1 p-4 overflow-y-auto text-gray-700 dark:text-gray-200 space-y-2">
-                {messages.map((message) => (
+                {[...messages].reverse().map((message) => (
                     <div
                         key={message.id}
                         className={`flex ${

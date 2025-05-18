@@ -79,4 +79,29 @@ class FriendshipController extends Controller
 
         return response()->json($requests);
     }
+
+    // Eliminar amistad
+    public function removeFriend($userId)
+    {
+        $user = auth()->user();
+        $friendship = Friendship::where(function($query) use ($userId) {
+                $query->where('sender_id', Auth::id())
+                      ->where('receiver_id', $userId);
+            })
+            ->orWhere(function($query) use ($userId) {
+                $query->where('sender_id', $userId)
+                      ->where('receiver_id', Auth::id());
+            })
+            ->first();
+
+        if ($friendship) {
+            $friendship->delete();
+            return response()->json([
+                'status' => 'none', // importante para el frontend
+                'message' => 'Amistad eliminada correctamente.'
+            ]);
+        } else {
+            return response()->json(['message' => 'No se encontró la amistad.'], 404);
+        }
+    }
 }

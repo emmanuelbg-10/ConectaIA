@@ -13,6 +13,15 @@ use App\Http\Controllers\ResponseController;
 use App\Http\Controllers\FriendshipController;
 use App\Http\Controllers\FollowController;
 use App\Http\Controllers\MessageController; // Asegúrate de importar tu controlador de mensajes
+use Illuminate\Support\Facades\Broadcast;
+use Illuminate\Http\Request;
+
+
+Broadcast::routes(['middleware' => []]);
+
+Route::post('/broadcasting/auth', function (Request $request) {
+    return response()->json(['result' => 'ok']);
+});
 
 Route::get('/', function () {
     return Inertia::render('Welcome', [
@@ -87,6 +96,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/friendships/reject/{id}', [FriendshipController::class, 'rejectRequest']);
     Route::get('/friendships/received', [FriendshipController::class, 'receivedRequests']);
     Route::get('/friendships/sent', [FriendshipController::class, 'sentRequests']);
+    Route::post('/friendships/remove/{userId}', [FriendshipController::class, 'removeFriend']);
 });
 
 Route::middleware('auth')->post('/follow/{userId}', [FollowController::class, 'toggle']);

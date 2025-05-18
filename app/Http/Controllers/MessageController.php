@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Events\MessageSent;
 
 class MessageController extends Controller
 {
@@ -37,6 +38,8 @@ class MessageController extends Controller
             'content' => $request->content,
             'sent_at' => now(),
         ]);
+
+        event(new MessageSent($message));
 
         return response()->json($message);
     }

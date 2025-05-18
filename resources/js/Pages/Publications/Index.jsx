@@ -378,15 +378,33 @@ export default function TwitterStyleFeed({
                                                 <UserMenu
                                                     userId={publication.user.id}
                                                     publicationId={publication.id}
+                                                    friendStatus={publication.friend_status || "none"}
+                                                    onFriendStatusChange={status => {
+                                                        setPublications(prev =>
+                                                            prev.map(pub =>
+                                                                pub.user.id === publication.user.id
+                                                                    ? { ...pub, friend_status: status }
+                                                                    : pub
+                                                            )
+                                                        );
+                                                    }}
                                                     isOwner={authUser.id === publication.user.id}
                                                     isAdmin={authUser.is_admin || authUser.is_moderator}
-                                                    friendStatus={publication.friend_status || "none"}
                                                     following={publication.following || false}
                                                     onToggleFollow={(userId, following) => {
                                                         setPublications((prev) =>
                                                             prev.map((pub) =>
                                                                 pub.user.id === userId
                                                                     ? { ...pub, following }
+                                                                    : pub
+                                                            )
+                                                        );
+                                                    }}
+                                                    onFriendRemoved={() => {
+                                                        setPublications((prev) =>
+                                                            prev.map((pub) =>
+                                                                pub.user.id === publication.user.id
+                                                                    ? { ...pub, friend_status: "none" }
                                                                     : pub
                                                             )
                                                         );

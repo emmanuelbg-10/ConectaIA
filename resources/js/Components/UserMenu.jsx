@@ -12,6 +12,8 @@ export default function UserMenu({
     following,
     onToggleFollow,
     onDeletePublication,
+    onFriendRemoved,
+    onFriendStatusChange,
 }) {
     const [open, setOpen] = useState(false);
     const menuRef = useRef();
@@ -75,8 +77,19 @@ export default function UserMenu({
                     {/* Solo muestra amistad y seguir si NO eres el dueño */}
                     {!isOwner && (
                         <>
-                            <FriendButton userId={userId} initialStatus={friendStatus} />
-                            <div className="mt-2">
+                            <FriendButton
+                                userId={userId}
+                                initialStatus={friendStatus}
+                                onFriendStatusChange={status => {
+                                    // Llama al handler del padre si existe
+                                    if (typeof onFriendStatusChange === "function") {
+                                        onFriendStatusChange(status);
+                                    }
+                                    // Si quieres, también puedes cerrar el menú aquí si lo deseas
+                                }}
+                                onFriendRemoved={onFriendRemoved}
+                            />
+                            <div className="mt-2"> 
                                 <FollowButton userId={userId} initialFollowing={following} onToggleFollow={onToggleFollow} />
                             </div>
                         </>
