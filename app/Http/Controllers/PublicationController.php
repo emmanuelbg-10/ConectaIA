@@ -147,10 +147,37 @@ class PublicationController extends Controller
         return redirect()->route('publications.index')->with('success', 'Publicación eliminada con éxito.');
     }
 
+    /**
+     * Mostrar una publicación específica.
+     */
     public function show(Publication $publication)
-{
-    return Inertia::render('Publications/Show', [
-        'publication' => $publication->load(['user', 'hashtags', 'mentions.user']),
-    ]);
-}
+    {
+        $publication->load('user');
+
+        // Trae TODAS las respuestas de la publicación (no solo las principales)
+        $responses = \App\Models\Response::where('publication_id', $publication->id)
+            ->with('user')
+            ->get();
+
+        // Agrupa por parent_id
+        $grouped = $responses->groupBy('parent_id');
+
+        // Función recursiva para anidar
+        $buildTree = function($parentId) use (&$buildTree, $grouped) {
+            return ($grouped[$parentId] ?? collect())->map(function($response) use (&$buildTree) {
+                $response->children = $buildTree($response->id);
+                return $response;
+            })->values();
+        };
+
+        $responsesTree = $buildTree(null);
+
+        // Agrega las respuestas anidadas al objeto publication
+        $publication->responses = $responsesTree;
+
+        return Inertia::render('Publications/Show', [
+            'publication' => $publication,
+             'authUser' => auth()->user(),
+        ]);
+    }
 }
