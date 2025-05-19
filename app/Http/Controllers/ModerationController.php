@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Log;
  * 
  * This controller's only purpose is to manage every single publication,
  * response, message, etc... any social interaction by making sure it's
- * considere appropiate according to our guidelines.
+ * appropiate according to our guidelines.
  */
 class ModerationController extends Controller
 {
