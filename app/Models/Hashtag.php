@@ -29,4 +29,6 @@ class Hashtag extends Model
          // Tabla pivote 'hashtag_publications'
         return $this->belongsToMany(Publication::class, 'hashtag_publications');
     }
+    
+    public function sender() { return $this->belongsTo(User::class, 'sender_id'); }
 }

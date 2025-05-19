@@ -9,9 +9,12 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
+use Cloudinary\Api\Exception\ApiException;
+use CloudinaryLabs\CloudinaryLaravel\Facades\Cloudinary;
 
 /**
  * Manages all publications.
@@ -36,35 +39,123 @@ class PublicationController extends Controller
      * Returns an Inertia response for regular page loads or a JSON response
      * for dynamic additions.
      */
-public function index(Request $request): Response|JsonResponse
-{
-    $publications = Publication::with(['user', 'hashtags'])
-        ->latest()
-        ->paginate(10);
+    public function index(Request $request): Response|JsonResponse
+    {
+        $publications = Publication::with(['user', 'hashtags'])
+            ->latest()
+            ->paginate(10);
 
-    // Mapea cada publicación para agregar likesCount y likedByMe
-    $publications->getCollection()->transform(function ($publication) use ($request) {
-        $publication->likesCount = $publication->likes()->count();
-        $publication->responsesCount = $publication->responses()->count();
-        $publication->likedByMe = $request->user()
-            ? $publication->likes()->where('user_id', $request->user()->id)->exists()
-            : false;
-        return $publication;
-    });
+        $publications->getCollection()->transform(function ($publication) use ($request) {
+            $publication->likesCount = $publication->likes()->count();
+            $publication->responsesCount = $publication->responses()->count();
+            $publication->likedByMe = $request->user()
+                ? $publication->likes()->where('user_id', $request->user()->id)->exists()
+                : false;
+            return $publication;
+        });
 
-    // Solo responde JSON si la petición es AJAX Y NO es una petición Inertia
-    if ($request->ajax() && !$request->header('X-Inertia')) {
-        return response()->json([
-            'data' => $publications->items(),
-            'next_page_url' => $publications->nextPageUrl()
+        // Solo responde JSON si la petición es AJAX Y NO es una petición Inertia
+        if ($request->ajax() && !$request->header('X-Inertia')) {
+            return response()->json([
+                'data' => $publications->items(),
+                'next_page_url' => $publications->nextPageUrl()
+            ]);
+        }
+
+        $authUserId = $request->user() ? $request->user()->id : null;
+
+        // Agregar información de amistad para cada publicación
+        foreach ($publications as $pub) {
+            $friendship = \App\Models\Friendship::where(function ($q) use ($pub, $authUserId) {
+                $q->where('sender_id', $authUserId)->where('receiver_id', $pub->user_id);
+            })->orWhere(function ($q) use ($pub, $authUserId) {
+                $q->where('sender_id', $pub->user_id)->where('receiver_id', $authUserId);
+            })->first();
+
+            $pub->friend_status = $friendship ? $friendship->status : 'none';
+
+            $following = \App\Models\Following::where('follower_id', $authUserId)
+                ->where('followed_id', $pub->user_id)
+                ->exists();
+
+            $pub->following = $following;
+        }
+
+        $user = auth()->user();
+
+        // Amigos donde el usuario es sender o receiver y la amistad está aceptada
+        $friends = \App\Models\User::whereIn('id', function ($query) use ($user) {
+            $query->select('receiver_id')
+                ->from('friendships')
+                ->where('sender_id', $user->id)
+                ->where('status', 'accepted');
+        })
+            ->orWhereIn('id', function ($query) use ($user) {
+                $query->select('sender_id')
+                    ->from('friendships')
+                    ->where('receiver_id', $user->id)
+                    ->where('status', 'accepted');
+            })
+            ->get(['id', 'name', 'profile_photo_url']);
+
+        Log::info('Amigos encontrados:', $friends->toArray());
+
+        return Inertia::render('Publications/Index', [
+            'authUser' => [
+                'id' => auth()->id(),
+                'name' => auth()->user()->name,
+                'profile_photo_url' => auth()->user()->profile_photo_url,
+                'is_admin' => auth()->user()->hasRole('administrador'),
+                'is_moderator' => auth()->user()->hasRole('moderador'),
+                // ...otros campos que necesites
+            ],
+            'publications' => $publications,
+            'friends' => $friends,
         ]);
     }
 
-    return Inertia::render('Publications/Index', [
-        'authUser' => auth()->user(),
-        'publications' => $publications,
-    ]);
-}
+    /**
+     * Show a specific publication.
+     * 
+     * This method eager loads the user and possible hashtags and mentions to
+     * display them in detail and renders them with Inertia.
+     * 
+     * @param \App\Models\Publication $publication
+     * The ID of the publication about to be shown.
+     * 
+     * @return \Inertia\Response
+     * Returns an Inertia render showing the publication.
+     */
+    public function show(Publication $publication)
+    {
+        $publication->load('user');
+
+        // Trae TODAS las respuestas de la publicación (no solo las principales)
+        $responses = \App\Models\Response::where('publication_id', $publication->id)
+            ->with('user')
+            ->get();
+
+        // Agrupa por parent_id
+        $grouped = $responses->groupBy('parent_id');
+
+        // Función recursiva para anidar
+        $buildTree = function ($parentId) use (&$buildTree, $grouped) {
+            return ($grouped[$parentId] ?? collect())->map(function ($response) use (&$buildTree) {
+                $response->children = $buildTree($response->id);
+                return $response;
+            })->values();
+        };
+
+        $responsesTree = $buildTree(null);
+
+        // Agrega las respuestas anidadas al objeto publication
+        $publication->responses = $responsesTree;
+
+        return Inertia::render('Publications/Show', [
+            'publication' => $publication,
+            'authUser' => auth()->user(),
+        ]);
+    }
 
     /**
      * Render the form for creating a publication.
@@ -94,73 +185,58 @@ public function index(Request $request): Response|JsonResponse
      * @return \Illuminate\Http\RedirectResponse
      * Redirects back to the index with a success message.
      */
-public function store(Request $request): RedirectResponse
-{
-    $validated = $request->validate([
-        'textContent' => 'required|string|max:500',
-        'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-    ]);
-
-    // Procesar imagen
-    $imageURL = null;
-    if ($request->hasFile('image')) {
-        $path = $request->file('image')->store('publications', 'public');
-        $imageURL = Storage::url($path);
-    }
-
-    $publication = Publication::create([
-        'user_id' => auth()->id(),
-        'textContent' => $validated['textContent'],
-        'imageURL' => $imageURL,
-    ])->load('user', 'hashtags');
-
-    // Respuesta para Inertia
-    return back()->with([
-        'success' => 'Publicación creada con éxito',
-        'newPublication' => $publication
-    ]);
-}
-    /**
-     * Show a specific publication.
-     * 
-     * This method eager loads the user and possible hashtags and mentions to
-     * display them in detail and renders them with Inertia.
-     * 
-     * @param \App\Models\Publication $publication
-     * The ID of the publication about to be shown.
-     * 
-     * @return \Inertia\Response
-     * Returns an Inertia render showing the publication.
-     */
-    public function show(Publication $publication): Response
+    public function store(Request $request)
     {
-        $publication->load('user');
-
-        // Trae TODAS las respuestas de la publicación (no solo las principales)
-        $responses = \App\Models\Response::where('publication_id', $publication->id)
-            ->with('user')
-            ->get();
-
-        // Agrupa por parent_id
-        $grouped = $responses->groupBy('parent_id');
-
-        // Función recursiva para anidar
-        $buildTree = function($parentId) use (&$buildTree, $grouped) {
-            return ($grouped[$parentId] ?? collect())->map(function($response) use (&$buildTree) {
-                $response->children = $buildTree($response->id);
-                return $response;
-            })->values();
-        };
-
-        $responsesTree = $buildTree(null);
-
-        // Agrega las respuestas anidadas al objeto publication
-        $publication->responses = $responsesTree;
-
-        return Inertia::render('Publications/Show', [
-            'publication' => $publication,
-             'authUser' => auth()->user(),
+        $validated = $request->validate([
+            'textContent' => 'required|string|max:500',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
+
+        $imageURL = null;
+
+        if ($request->hasFile('image')) {
+            $uploadedFile = $request->file('image');
+
+            try {
+                $base64Image = 'data:' . $uploadedFile->getMimeType() . ';base64,' . base64_encode($uploadedFile->getContent());
+
+                $uploaded = Cloudinary::uploadApi()->upload($base64Image, [
+                    'resource_type' => 'image',
+                ]);
+
+                $imageURL = $uploaded['secure_url'];
+            } catch (\Cloudinary\Api\Exception\ApiException $e) {
+                dd("Error de Cloudinary:", $e->getMessage());
+            }
+        }
+
+        $publication = Publication::create([
+            'user_id' => auth()->id(),
+            'textContent' => $validated['textContent'],
+            'imageURL' => $imageURL,
+        ])->load('user', 'hashtags');
+
+        // Agregar campos extra igual que en index
+        $publication->likesCount = 0;
+        $publication->responsesCount = 0;
+        $publication->likedByMe = false;
+
+        $authUserId = $request->user() ? $request->user()->id : null;
+        $friendship = \App\Models\Friendship::where(function ($q) use ($publication, $authUserId) {
+            $q->where('sender_id', $authUserId)->where('receiver_id', $publication->user_id);
+        })->orWhere(function ($q) use ($publication, $authUserId) {
+            $q->where('sender_id', $publication->user_id)->where('receiver_id', $authUserId);
+        })->first();
+
+        $publication->friend_status = $friendship ? $friendship->status : 'none';
+
+        $following = \App\Models\Following::where('follower_id', $authUserId)
+            ->where('followed_id', $publication->user_id)
+            ->exists();
+
+        $publication->following = $following;
+
+        return redirect()->route('publications.index')->with('success', 'Publicación creada con éxito.');
     }
 
     /**
@@ -208,7 +284,6 @@ public function store(Request $request): RedirectResponse
 
         $publication->update($request->only('textContent', 'imageURL'));
 
-        // Actualizar hashtags
         $publication->hashtags()->detach();
         if ($request->hashtags) {
             $hashtags = explode(',', $request->hashtags);
@@ -218,7 +293,6 @@ public function store(Request $request): RedirectResponse
             }
         }
 
-        // Actualizar menciones
         Mention::where('publication_id', $publication->id)->delete();
         if ($request->mentions) {
             $mentions = explode(',', $request->mentions);

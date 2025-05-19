@@ -1,7 +1,17 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Head, Link } from "@inertiajs/react";
-import { Inertia } from '@inertiajs/inertia';
+import { Inertia } from "@inertiajs/inertia";
 import Swal from "sweetalert2";
+import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
+import {
+    FiMessageSquare,
+    FiEdit,
+    FiTrash2,
+    FiArrowLeft,
+    FiSave,
+    FiX,
+    FiSend,
+} from "react-icons/fi";
 
 const csrf = document.querySelector('meta[name="csrf-token"]');
 const csrfToken = csrf ? csrf.getAttribute("content") : "";
@@ -20,126 +30,284 @@ function ResponseItem({
     editText,
     setEditText,
     handleEditSubmit,
-    handleDelete
+    handleDelete,
 }) {
     const isOwn = authUser && response.user.id === authUser.id;
+    const isReplying = replyingTo === response.id && editingId !== response.id;
+    const isEditing = editingId === response.id;
+    const replyTextAreaRef = useRef(null);
+    const editTextAreaRef = useRef(null);
+    const responseItemRef = useRef(null);
+    const transitionDuration = 300;
+    const [isReplyFocused, setIsReplyFocused] = useState(false);
+
+    useEffect(() => {
+        if (isReplying && replyTextAreaRef.current && !isReplyFocused) {
+            replyTextAreaRef.current.focus();
+        }
+        if (isEditing && editTextAreaRef.current) {
+            editTextAreaRef.current.focus();
+        }
+        if (!isReplying && replyTextAreaRef.current && isReplyFocused) {
+            replyTextAreaRef.current.blur();
+            setIsReplyFocused(false);
+        }
+
+        const handleClickOutside = (event) => {
+            if (
+                responseItemRef.current &&
+                !responseItemRef.current.contains(event.target) &&
+                isEditing &&
+                !event.target.closest("button")
+            ) {
+                onEditClick(0, "");
+            }
+        };
+
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, [isReplying, isEditing, onEditClick, isReplyFocused]);
+
+    const handleTransition = (callback, delay = transitionDuration) => {
+        setTimeout(callback, delay);
+    };
+
+    const handleReplyKeyDown = (e, parentId) => {
+        if (e.key === "Enter" && !e.shiftKey && replyText.trim()) {
+            e.preventDefault();
+            handleReplySubmit(e, parentId);
+        }
+    };
+
+    const handleEditKeyDown = (e, id) => {
+        if (e.key === "Enter" && !e.shiftKey && editText.trim()) {
+            e.preventDefault();
+            handleEditSubmit(e, id);
+        }
+    };
 
     return (
-        <div className="border-b py-2 pl-2">
-            <div className="flex items-center space-x-2">
-                <span className="font-bold">{response.user.name}:</span>
-                <span>{response.text}</span>
-                <button
-                    className="ml-2 text-xs text-blue-500 hover:underline"
-                    onClick={() => onReplyClick(response.id)}
-                    type="button"
-                >
-                    Responder
-                </button>
-                {isOwn && (
-                    <>
-                        <button
-                            className="ml-2 text-xs text-yellow-600 hover:underline"
-                            onClick={() => onEditClick(response.id, response.text)}
-                            type="button"
-                        >
-                            Editar
-                        </button>
-                        <button
-                            className="ml-2 text-xs text-red-600 hover:underline"
-                            onClick={() => handleDelete(response.id)}
-                            type="button"
-                        >
-                            Borrar
-                        </button>
-                    </>
-                )}
-            </div>
-            {/* Formulario para editar */}
-            {editingId === response.id && (
-                <form
-                    onSubmit={e => handleEditSubmit(e, response.id)}
-                    className="mt-2"
-                >
-                    <textarea
-                        value={editText}
-                        onChange={e => setEditText(e.target.value)}
-                        className="w-full border rounded p-2"
-                        rows={2}
-                    />
-                    <div className="flex gap-2 mt-1">
-                        <button
-                            type="submit"
-                            disabled={processing || !editText.trim()}
-                            className="px-3 py-1 bg-yellow-500 text-white rounded text-sm"
-                        >
-                            Guardar
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => onEditClick(0, "")}
-                            className="px-3 py-1 bg-gray-200 text-gray-700 rounded text-sm"
-                        >
-                            Cancelar
-                        </button>
-                    </div>
-                </form>
-            )}
-            {/* Formulario para responder */}
-            {replyingTo === response.id && editingId !== response.id && (
-                <form
-                    onSubmit={e => handleReplySubmit(e, response.id)}
-                    className="mt-2"
-                >
-                    <textarea
-                        value={replyText}
-                        onChange={e => setReplyText(e.target.value)}
-                        className="w-full border rounded p-2"
-                        placeholder="Escribe una respuesta..."
-                        rows={2}
-                    />
-                    <div className="flex gap-2 mt-1">
-                        <button
-                            type="submit"
-                            disabled={processing || !replyText.trim()}
-                            className="px-3 py-1 bg-blue-500 text-white rounded text-sm"
-                        >
-                            {processing ? "Enviando..." : "Responder"}
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => onReplyClick(0)}
-                            className="px-3 py-1 bg-gray-200 text-gray-700 rounded text-sm"
-                        >
-                            Cancelar
-                        </button>
-                    </div>
-                </form>
-            )}
-            {/* Respuestas hijas */}
-            {response.children && response.children.length > 0 && (
-                <div className="pl-4 mt-2 border-l border-gray-200">
-                    {response.children.map(child => (
-                        <ResponseItem
-                            key={child.id}
-                            response={child}
-                            onReplyClick={onReplyClick}
-                            replyingTo={replyingTo}
-                            replyText={replyText}
-                            setReplyText={setReplyText}
-                            handleReplySubmit={handleReplySubmit}
-                            processing={processing}
-                            authUser={authUser}
-                            onEditClick={onEditClick}
-                            editingId={editingId}
-                            editText={editText}
-                            setEditText={setEditText}
-                            handleEditSubmit={handleEditSubmit}
-                            handleDelete={handleDelete}
+        <div
+            className="py-3 px-4 border-b border-gray-200 dark:border-gray-700"
+            ref={responseItemRef}
+        >
+            <div className="flex items-start space-x-3">
+                <div className="flex-shrink-0">
+                    {response.user.avatarURL ? (
+                        <img
+                            src={response.user.avatarURL}
+                            alt={response.user.name}
+                            className="w-8 h-8 rounded-full object-cover"
                         />
-                    ))}
+                    ) : (
+                        <div className="w-8 h-8 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-sm text-gray-700 dark:text-gray-300">
+                            {response.user.name.charAt(0).toUpperCase()}
+                        </div>
+                    )}
                 </div>
-            )}
+                <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                        <span className="font-semibold text-gray-800 dark:text-gray-200">
+                            {response.user.name}
+                        </span>
+                        <div className="flex items-center space-x-2">
+                            <button
+                                className="text-blue-500 hover:text-blue-700 focus:outline-none"
+                                onClick={() => {
+                                    if (isEditing) {
+                                        onEditClick(0, "");
+                                        handleTransition(() =>
+                                            onReplyClick(response.id)
+                                        );
+                                    } else {
+                                        onReplyClick(response.id);
+                                    }
+                                }}
+                                type="button"
+                                aria-label="Responder"
+                            >
+                                <FiMessageSquare className="h-5 w-5" />
+                            </button>
+                            {isOwn && (
+                                <>
+                                    <button
+                                        className="text-yellow-600 hover:text-yellow-800 focus:outline-none"
+                                        onClick={() => {
+                                            if (isReplying) {
+                                                onReplyClick(0);
+                                                handleTransition(() =>
+                                                    onEditClick(
+                                                        response.id,
+                                                        response.text
+                                                    )
+                                                );
+                                            } else {
+                                                onEditClick(
+                                                    response.id,
+                                                    response.text
+                                                );
+                                            }
+                                        }}
+                                        type="button"
+                                        aria-label="Editar"
+                                    >
+                                        <FiEdit className="h-5 w-5" />
+                                    </button>
+                                    <button
+                                        className="text-red-600 hover:text-red-800 focus:outline-none"
+                                        onClick={() => {
+                                            if (isEditing) onEditClick(0, "");
+                                            handleDelete(response.id);
+                                        }}
+                                        type="button"
+                                        aria-label="Borrar"
+                                    >
+                                        <FiTrash2 className="h-5 w-5" />
+                                    </button>
+                                </>
+                            )}
+                        </div>
+                    </div>
+                    <p className="text-gray-700 dark:text-gray-300 mt-1">
+                        {response.text}
+                    </p>
+
+                    {/* Contenedor de formularios con transiciones */}
+                    <div className="mt-3 space-y-3">
+                        {/* Formulario de edición */}
+                        <div
+                            className={`transition-all duration-300 ease-in-out overflow-hidden ${
+                                isEditing
+                                    ? "max-h-96 opacity-100"
+                                    : "max-h-0 opacity-0"
+                            }`}
+                        >
+                            {isEditing && (
+                                <form
+                                    onSubmit={(e) =>
+                                        handleEditSubmit(e, response.id)
+                                    }
+                                >
+                                    <textarea
+                                        ref={editTextAreaRef}
+                                        value={editText}
+                                        onChange={(e) =>
+                                            setEditText(e.target.value)
+                                        }
+                                        className="w-full border rounded p-2 text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-800"
+                                        rows={3}
+                                        onKeyDown={(e) =>
+                                            handleEditKeyDown(e, response.id)
+                                        }
+                                    />
+                                    <div className="flex gap-2 mt-2">
+                                        <button
+                                            type="submit"
+                                            disabled={
+                                                processing || !editText.trim()
+                                            }
+                                            className="px-3 py-1 bg-[#214478] text-white rounded text-sm focus:outline-none hover:opacity-80 flex items-center"
+                                        >
+                                            <FiSave className="mr-1" /> Guardar
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => onEditClick(0, "")}
+                                            className="px-3 py-1 bg-gray-200 text-gray-700 rounded text-sm focus:outline-none hover:opacity-80 dark:bg-gray-700 dark:text-gray-300 flex items-center"
+                                        >
+                                            <FiX className="mr-1" /> Cancelar
+                                        </button>
+                                    </div>
+                                </form>
+                            )}
+                        </div>
+
+                        {/* Formulario de respuesta */}
+                        <div
+                            className={`transition-all duration-300 ease-in-out overflow-hidden ${
+                                isReplying
+                                    ? "max-h-96 opacity-100"
+                                    : "max-h-0 opacity-0"
+                            }`}
+                        >
+                            {isReplying && (
+                                <form
+                                    onSubmit={(e) =>
+                                        handleReplySubmit(e, response.id)
+                                    }
+                                >
+                                    <textarea
+                                        ref={replyTextAreaRef}
+                                        value={replyText}
+                                        onChange={(e) =>
+                                            setReplyText(e.target.value)
+                                        }
+                                        className="w-full border rounded p-2 text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-800"
+                                        placeholder="Escribe una respuesta..."
+                                        rows={3}
+                                        onKeyDown={(e) =>
+                                            handleReplyKeyDown(e, response.id)
+                                        }
+                                        onFocus={() => setIsReplyFocused(true)}
+                                    />
+                                    <div className="flex gap-2 mt-2">
+                                        <button
+                                            type="submit"
+                                            disabled={
+                                                processing || !replyText.trim()
+                                            }
+                                            className="px-3 py-1 bg-[#214478] text-white rounded text-sm focus:outline-none hover:opacity-80 flex items-center"
+                                        >
+                                            {processing ? (
+                                                "Enviando..."
+                                            ) : (
+                                                <>
+                                                    <FiSend className="mr-1" />{" "}
+                                                    Responder
+                                                </>
+                                            )}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => onReplyClick(0)}
+                                            className="px-3 py-1 bg-gray-200 text-gray-700 rounded text-sm focus:outline-none hover:opacity-80 dark:bg-gray-700 dark:text-gray-300 flex items-center"
+                                        >
+                                            <FiX className="mr-1" /> Cancelar
+                                        </button>
+                                    </div>
+                                </form>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Respuestas hijas */}
+                    {response.children && response.children.length > 0 && (
+                        <div className="pl-6 mt-3 border-l border-gray-200 dark:border-gray-700">
+                            {response.children.map((child) => (
+                                <ResponseItem
+                                    key={child.id}
+                                    response={child}
+                                    onReplyClick={onReplyClick}
+                                    replyingTo={replyingTo}
+                                    replyText={replyText}
+                                    setReplyText={setReplyText}
+                                    handleReplySubmit={handleReplySubmit}
+                                    processing={processing}
+                                    authUser={authUser}
+                                    onEditClick={onEditClick}
+                                    editingId={editingId}
+                                    editText={editText}
+                                    setEditText={setEditText}
+                                    handleEditSubmit={handleEditSubmit}
+                                    handleDelete={handleDelete}
+                                />
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </div>
         </div>
     );
 }
@@ -148,6 +316,7 @@ export default function Show({ publication, authUser }) {
     // Para responder a la publicación principal
     const [pubText, setPubText] = useState("");
     const [processing, setProcessing] = useState(false);
+    const pubTextAreaRef = useRef(null);
 
     // Para responder a una respuesta específica
     const [replyingTo, setReplyingTo] = useState(0);
@@ -160,9 +329,23 @@ export default function Show({ publication, authUser }) {
     // Estado para paginación de respuestas
     const [visibleCount, setVisibleCount] = useState(10);
 
+    useEffect(() => {
+        if (pubTextAreaRef.current) {
+            pubTextAreaRef.current.focus();
+        }
+    }, []);
+
     const onEditClick = (id, text) => {
         setEditingId(id);
         setEditText(text);
+        setReplyingTo(0);
+    };
+
+    const handlePubKeyDown = (e) => {
+        if (e.key === "Enter" && !e.shiftKey && pubText.trim()) {
+            e.preventDefault();
+            handlePubSubmit(e);
+        }
     };
 
     // Responder a la publicación principal
@@ -190,12 +373,21 @@ export default function Show({ publication, authUser }) {
             });
             const geminiData = await geminiRes.json();
             if (!geminiData.allowed) {
-                Swal.fire("Contenido bloqueado", geminiData.message || "Tu respuesta contiene contenido ofensivo.", "warning");
+                Swal.fire(
+                    "Contenido bloqueado",
+                    geminiData.message ||
+                        "Tu respuesta contiene contenido ofensivo.",
+                    "warning"
+                );
                 setProcessing(false);
                 return;
             }
         } catch (err) {
-            Swal.fire("Error", "No se pudo validar el contenido. Intenta de nuevo.", "error");
+            Swal.fire(
+                "Error",
+                "No se pudo validar el contenido. Intenta de nuevo.",
+                "error"
+            );
             setProcessing(false);
             return;
         }
@@ -240,12 +432,21 @@ export default function Show({ publication, authUser }) {
             });
             const geminiData = await geminiRes.json();
             if (!geminiData.allowed) {
-                Swal.fire("Contenido bloqueado", geminiData.message || "Tu respuesta contiene contenido ofensivo.", "warning");
+                Swal.fire(
+                    "Contenido bloqueado",
+                    geminiData.message ||
+                        "Tu respuesta contiene contenido ofensivo.",
+                    "warning"
+                );
                 setProcessing(false);
                 return;
             }
         } catch (err) {
-            Swal.fire("Error", "No se pudo validar el contenido. Intenta de nuevo.", "error");
+            Swal.fire(
+                "Error",
+                "No se pudo validar el contenido. Intenta de nuevo.",
+                "error"
+            );
             setProcessing(false);
             return;
         }
@@ -294,12 +495,21 @@ export default function Show({ publication, authUser }) {
             });
             const geminiData = await geminiRes.json();
             if (!geminiData.allowed) {
-                Swal.fire("Contenido bloqueado", geminiData.message || "Tu respuesta contiene contenido ofensivo.", "warning");
+                Swal.fire(
+                    "Contenido bloqueado",
+                    geminiData.message ||
+                        "Tu respuesta contiene contenido ofensivo.",
+                    "warning"
+                );
                 setProcessing(false);
                 return;
             }
         } catch (err) {
-            Swal.fire("Error", "No se pudo validar el contenido. Intenta de nuevo.", "error");
+            Swal.fire(
+                "Error",
+                "No se pudo validar el contenido. Intenta de nuevo.",
+                "error"
+            );
             setProcessing(false);
             return;
         }
@@ -314,6 +524,7 @@ export default function Show({ publication, authUser }) {
                     setEditingId(0);
                     setEditText("");
                     setProcessing(false);
+                    setReplyingTo(0);
                 },
                 onError: () => setProcessing(false),
             }
@@ -322,16 +533,38 @@ export default function Show({ publication, authUser }) {
 
     // Eliminar una respuesta
     const handleDelete = (id) => {
-        if (confirm("¿Seguro que quieres borrar esta respuesta?")) {
-            setProcessing(true);
-            Inertia.delete(
-                route("responses.destroy", { response: id }),
-                {
-                    onSuccess: () => setProcessing(false),
-                    onError: () => setProcessing(false),
-                }
-            );
-        }
+        Swal.fire({
+            title: "¿Estás seguro?",
+            text: "No podrás revertir esto.",
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonColor: "#d33",
+            cancelButtonColor: "#3085d6",
+            confirmButtonText: "Sí, borrar",
+            cancelButtonText: "Cancelar",
+        }).then((result) => {
+            if (result.isConfirmed) {
+                setProcessing(true);
+                Inertia.delete(route("responses.destroy", { response: id }), {
+                    onSuccess: () => {
+                        setProcessing(false);
+                        Swal.fire(
+                            "Borrado!",
+                            "La respuesta ha sido borrada.",
+                            "success"
+                        );
+                    },
+                    onError: () => {
+                        setProcessing(false);
+                        Swal.fire(
+                            "Error",
+                            "No se pudo borrar la respuesta.",
+                            "error"
+                        );
+                    },
+                });
+            }
+        });
     };
 
     // Ordena y recorta las respuestas principales (las más nuevas primero)
@@ -365,70 +598,117 @@ export default function Show({ publication, authUser }) {
     const hasMore = (publication.responses || []).length > visibleCount;
 
     return (
-        <div className="max-w-2xl mx-auto p-4">
+        <AuthenticatedLayout
+            user={authUser}
+            header={
+                <h2 className="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
+                    Publicación
+                </h2>
+            }
+        >
             <Head title="Publicación" />
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-4 mb-6">
-                <h2 className="font-bold text-lg">{publication.user.name}</h2>
-                <p className="mt-2">{publication.textContent}</p>
-                {publication.imageURL && (
-                    <img
-                        src={publication.imageURL}
-                        alt=""
-                        className="mt-4 rounded-xl max-h-80 w-full object-cover"
+            <div className="max-w-3xl mx-auto p-4">
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6">
+                    <div className="flex items-start space-x-3">
+                        <div className="flex-shrink-0">
+                            <div className="w-10 h-10 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                {publication.user.name.charAt(0).toUpperCase()}
+                            </div>
+                        </div>
+                        <div>
+                            <h2 className="font-semibold text-lg text-gray-800 dark:text-gray-200">
+                                {publication.user.name}
+                            </h2>
+                            <p className="mt-1 text-gray-700 dark:text-gray-300">
+                                {publication.textContent}
+                            </p>
+                            {publication.imageURL && (
+                                <img
+                                    src={publication.imageURL}
+                                    alt=""
+                                    className="mt-4 rounded-md max-h-96 w-full object-cover"
+                                />
+                            )}
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                                Publicado el{" "}
+                                {new Date(
+                                    publication.created_at
+                                ).toLocaleDateString()}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Formulario para responder a la publicación */}
+                <form
+                    onSubmit={handlePubSubmit}
+                    className="mb-6 flex items-center space-x-2"
+                >
+                    <textarea
+                        ref={pubTextAreaRef}
+                        value={pubText}
+                        onChange={(e) => setPubText(e.target.value)}
+                        className="w-full border rounded p-3 text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-800 focus:outline-none focus:ring-[#214478] focus:border-[#214478]"
+                        placeholder="Escribe una respuesta..."
+                        rows={3}
+                        onKeyDown={handlePubKeyDown}
                     />
-                )}
-            </div>
-
-            {/* Formulario para responder a la publicación */}
-            <form onSubmit={handlePubSubmit} className="mb-6 flex items-center gap-2">
-                <textarea
-                    value={pubText}
-                    onChange={e => setPubText(e.target.value)}
-                    className="w-full border rounded p-2"
-                    placeholder="Escribe una respuesta..."
-                    rows={2}
-                />
-                <button
-                    type="submit"
-                    disabled={processing || !pubText.trim()}
-                    className="px-4 py-2 bg-blue-500 text-white rounded"
-                >
-                    {processing ? "Enviando..." : "Responder"}
-                </button>
-                <Link
-                    href={route("publications.index")}
-                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
-                >
-                    ← Volver al feed
-                </Link>
-            </form>
-
-            <div>
-                <h3 className="font-semibold mb-2">Respuestas</h3>
-                {sortedResponses.length > 0 ? (
-                    renderResponses(sortedResponses)
-                ) : (
-                    <p className="text-gray-500">No hay respuestas aún.</p>
-                )}
-
-                {/* Botón "Ver más" */}
-                {hasMore && (
                     <button
-                        onClick={() => setVisibleCount(visibleCount + 10)}
-                        className="block mx-auto my-4 px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+                        type="submit"
+                        disabled={processing || !pubText.trim()}
+                        className="px-4 py-2 bg-[#214478] text-white rounded hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-[#214478] focus-ring-offset-2 flex items-center"
                     >
-                        Ver más respuestas
+                        {processing ? (
+                            "Enviando..."
+                        ) : (
+                            <>
+                                <FiSend className="mr-1" /> Responder
+                            </>
+                        )}
                     </button>
-                )}
+                    <Link
+                        href={route("publications.index")}
+                        className="px-3 py-2 bg-gray-200 text-gray-700 rounded hover:opacity-80 dark:bg-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus-ring-offset-2 flex items-center"
+                    >
+                        <FiArrowLeft className="h-5 w-5 inline-block align-middle mr-1" />
+                        Volver
+                    </Link>
+                </form>
 
-                {/* Botón "Volver al feed" SIEMPRE debajo del último cargado */}
-                <Link
-                    href={route("publications.index")}
-                    className="block mt-6 text-blue-500 hover:underline"
-                >
-                    ← Volver al feed
-                </Link>
+                <div className="bg-white dark:bg-gray-800 rounded-md shadow-md p-6">
+                    <h3 className="font-semibold text-lg text-gray-800 dark:text-gray-200 mb-4">
+                        Respuestas
+                    </h3>
+                    {sortedResponses.length > 0 ? (
+                        renderResponses(sortedResponses)
+                    ) : (
+                        <p className="text-gray-500 dark:text-gray-400">
+                            No hay respuestas aún.
+                        </p>
+                    )}
+
+                    {/* Botón "Ver más" */}
+                    {hasMore && (
+                        <button
+                            onClick={() => setVisibleCount(visibleCount + 10)}
+                            className="block mx-auto mt-4 px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus-ring-offset-2"
+                        >
+                            Ver más respuestas
+                        </button>
+                    )}
+
+                    {/* Botón "Volver al feed" SIEMPRE debajo del último cargado */}
+                    {!hasMore && (
+                        <Link
+                            href={route("publications.index")}
+                            className=" mt-6 text-[#214478] hover:underline focus:outline-none focus:ring-2 focus:ring-[#214478] focus-ring-offset-2 flex items-center"
+                        >
+                            <FiArrowLeft className="h-5 w-5 inline-block align-middle mr-1" />
+                            Volver al feed
+                        </Link>
+                    )}
+                </div>
             </div>
-        </div>
+        </AuthenticatedLayout>
     );
 }

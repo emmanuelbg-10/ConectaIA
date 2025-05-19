@@ -1,37 +1,82 @@
-import React from "react";
-import { faker } from "@faker-js/faker";
+import React, { useState, useEffect } from "react";
+import Echo from 'laravel-echo';
+import Pusher from 'pusher-js';
 
-// Función para crear un mensaje falso
-const createFakeMessage = (senderId, receiverId, isSentByUser) => ({
-    id: faker.number.int(),
-    user_sender_id: senderId,
-    user_receiver_id: receiverId,
-    content: faker.lorem.sentence(),
-    imageURL: faker.image.url(), // O null si no hay imagen
-    read: faker.datatype.boolean(),
-    sent_at: faker.date.past(),
-    isSentByUser: isSentByUser, // Indica si el mensaje lo envió el usuario actual
+window.Pusher = Pusher;
+window.Echo = new Echo({
+  broadcaster: 'pusher',
+  key: 'fe9bb49ebd480f64f723',
+  cluster: 'eu',
+  forceTLS: true,
 });
 
-const ChatWindow = ({ selectedChat, onClose }) => {
-    // Simula el ID del usuario actual
-    const currentUserId = 123;
+// El componente ChatWindow recibe las props: selectedChat, messages, currentUserId y onClose
+const ChatWindow = ({ selectedChat, messages, currentUserId, onClose, setMessages }) => {
+    const [newMessage, setNewMessage] = useState("");
 
-    // Genera algunos mensajes de ejemplo
-    const fakeMessages = [
-        createFakeMessage(currentUserId, selectedChat.id, true), // Mensaje enviado por el usuario
-        createFakeMessage(selectedChat.id, currentUserId, false), // Mensaje recibido por el usuario
-        createFakeMessage(currentUserId, selectedChat.id, true),
-        createFakeMessage(selectedChat.id, currentUserId, false),
-        createFakeMessage(currentUserId, selectedChat.id, true),
-        createFakeMessage(selectedChat.id, currentUserId, false),
-        createFakeMessage(currentUserId, selectedChat.id, true),
-    ].sort((a, b) => a.sent_at.getTime() - b.sent_at.getTime()); // Ordenar por fecha de envío
+    // Si no hay un chat seleccionado, no renderiza nada
+    if (!selectedChat) return null;
+
+    // Refresca los mensajes cada 2 segundos
+    useEffect(() => {
+        if (!selectedChat) return;
+        const interval = setInterval(async () => {
+            const res = await fetch(`/messages/${selectedChat.id}`);
+            if (res.ok) {
+                const msgs = await res.json();
+                setMessages(msgs);
+            }
+        }, 2000);
+
+        return () => clearInterval(interval);
+    }, [selectedChat, setMessages]);
+
+    // Función para enviar el mensaje
+    const handleSend = async () => {
+        if (!newMessage.trim()) return;
+
+        const res = await fetch("/messages/send", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-Requested-With": "XMLHttpRequest",
+                "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content,
+            },
+            body: JSON.stringify({
+                receiver_id: selectedChat.id,
+                content: newMessage,
+            }),
+        });
+
+        if (res.ok) {
+            const msg = await res.json();
+            setMessages((prev) => [...prev, msg]);
+            setNewMessage("");
+        }
+    };
+
+    useEffect(() => {
+        if (!selectedChat) return;
+
+        console.log('Suscribiendo a:', `chat.${currentUserId}`);
+        console.log('currentUserId en ChatWindow:', currentUserId);
+
+        window.Echo.channel(`chat.${currentUserId}`)
+          .listen('MessageSent', (e) => {
+            console.log('Evento recibido:', e);
+            setMessages(prev => [...prev, e.message]);
+          });
+
+        return () => {
+            window.Echo.leave(`chat.${currentUserId}`);
+        };
+    }, [selectedChat, currentUserId]);
 
     return (
         <div className="flex flex-col h-full bg-white dark:bg-black">
             {/* Header del chat (sticky) */}
             <div className="sticky top-0 bg-white dark:bg-black z-10 p-4 flex items-center gap-3 border-b border-gray-200 dark:border-gray-800">
+                {/* Botón para cerrar el chat */}
                 <button
                     onClick={onClose}
                     className="text-gray-500 dark:text-gray-400 hover:text-[#214478]"
@@ -50,11 +95,13 @@ const ChatWindow = ({ selectedChat, onClose }) => {
                         />
                     </svg>
                 </button>
+                {/* Avatar del usuario con el que se está chateando */}
                 <img
                     src={selectedChat.avatarURL}
                     alt={selectedChat.name}
                     className="h-10 w-10 rounded-full object-cover"
                 />
+                {/* Nombre del usuario con el que se está chateando */}
                 <h3 className="font-semibold text-gray-900 dark:text-white">
                     {selectedChat.name}
                 </h3>
@@ -62,18 +109,18 @@ const ChatWindow = ({ selectedChat, onClose }) => {
 
             {/* Mensajes */}
             <div className="flex-1 p-4 overflow-y-auto text-gray-700 dark:text-gray-200 space-y-2">
-                {fakeMessages.map((message) => (
+                {[...messages].reverse().map((message) => (
                     <div
                         key={message.id}
                         className={`flex ${
-                            message.isSentByUser
+                            message.user_sender_id === currentUserId
                                 ? "justify-end"
                                 : "justify-start"
                         }`}
                     >
                         <div
                             className={`rounded-lg py-2 px-3 ${
-                                message.isSentByUser
+                                message.user_sender_id === currentUserId
                                     ? "bg-[#214478] text-white"
                                     : "bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white"
                             } max-w-xs`}
@@ -88,7 +135,7 @@ const ChatWindow = ({ selectedChat, onClose }) => {
                             )}
                             <span
                                 className={`text-xs ${
-                                    message.isSentByUser
+                                    message.user_sender_id === currentUserId
                                         ? "text-white/70"
                                         : "text-gray-500 dark:text-gray-400"
                                 }`}
@@ -109,13 +156,24 @@ const ChatWindow = ({ selectedChat, onClose }) => {
                     <textarea
                         rows={1}
                         placeholder="Escribe un mensaje..."
+                        value={newMessage}
+                        onChange={e => setNewMessage(e.target.value)}
                         className="w-full resize-none overflow-hidden px-4 py-2 rounded-md bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-[#214478] focus:border-[#214478] focus:outline-none"
                         onInput={(e) => {
                             e.target.style.height = "auto";
                             e.target.style.height = `${e.target.scrollHeight}px`;
                         }}
+                        onKeyDown={e => {
+                            if (e.key === "Enter" && !e.shiftKey) {
+                                e.preventDefault();
+                                handleSend();
+                            }
+                        }}
                     />
-                    <button className="mt-3 w-full bg-[#214478] hover:bg-[#1a365e] text-white font-semibold py-2 px-4 rounded-md transition">
+                    <button
+                        className="mt-3 w-full bg-[#214478] hover:bg-[#1a365e] text-white font-semibold py-2 px-4 rounded-md transition"
+                        onClick={handleSend}
+                    >
                         Enviar
                     </button>
                 </div>

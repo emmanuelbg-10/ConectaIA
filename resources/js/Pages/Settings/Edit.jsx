@@ -1,16 +1,16 @@
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import { Head, usePage } from "@inertiajs/react";
-import DeleteUserForm from "./Partials/DeleteUserForm";
-import UpdatePasswordForm from "./Partials/UpdatePasswordForm";
-import UpdateProfileInformationForm from "./Partials/UpdateProfileInformationForm";
+import UpdatePasswordForm from "./UpdatePasswordForm";
+import UpdateProfileInformationForm from "./UpdateProfileInformationForm";
 import { Link } from "@inertiajs/react";
+import DeleteUserForm from "./DeleteUserForm";
 
 export default function Edit({ mustVerifyEmail, status }) {
     const user = usePage().props.auth.user;
 
     return (
         <AuthenticatedLayout>
-            <Head title="Perfil" />
+            <Head title="Ajustes" />
 
             <div className="py-12">
                 <div className="mx-auto max-w-7xl space-y-12 sm:px-6 lg:px-8">
