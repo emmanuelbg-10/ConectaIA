@@ -25,14 +25,18 @@ const ChatSidebar = ({ friends = [], onChatSelect }) => {
                             onClick={() => handleChatClick(friend)}
                         >
                             <div className="flex items-center gap-3">
-                                <img
-                                    src={
-                                        friend.profile_photo_url ||
-                                        "/default-user.png"
-                                    }
-                                    alt={friend.name}
-                                    className="h-10 w-10 rounded-full object-cover"
-                                />
+                                {friend.profile_photo_url ? (
+                                    <img
+                                        src={friend.profile_photo_url}
+                                        alt={friend.name}
+                                        className="h-12 w-12 rounded-full object-cover"
+                                    />
+                                ) : (
+                                    <div className="h-12 w-12 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-lg font-semibold text-gray-700 dark:text-gray-300">
+                                        {friend.name.charAt(0).toUpperCase()}
+                                    </div>
+                                )}
+
                                 <div className="flex-1 min-w-0">
                                     <p className="text-sm font-medium truncate text-gray-900 dark:text-gray-100">
                                         {friend.name}

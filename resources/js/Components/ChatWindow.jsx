@@ -1,17 +1,23 @@
 import React, { useState, useEffect } from "react";
-import Echo from 'laravel-echo';
-import Pusher from 'pusher-js';
+import Echo from "laravel-echo";
+import Pusher from "pusher-js";
 
 window.Pusher = Pusher;
 window.Echo = new Echo({
-  broadcaster: 'pusher',
-  key: 'fe9bb49ebd480f64f723',
-  cluster: 'eu',
-  forceTLS: true,
+    broadcaster: "pusher",
+    key: "fe9bb49ebd480f64f723",
+    cluster: "eu",
+    forceTLS: true,
 });
 
 // El componente ChatWindow recibe las props: selectedChat, messages, currentUserId y onClose
-const ChatWindow = ({ selectedChat, messages, currentUserId, onClose, setMessages }) => {
+const ChatWindow = ({
+    selectedChat,
+    messages,
+    currentUserId,
+    onClose,
+    setMessages,
+}) => {
     const [newMessage, setNewMessage] = useState("");
 
     // Si no hay un chat seleccionado, no renderiza nada
@@ -40,7 +46,9 @@ const ChatWindow = ({ selectedChat, messages, currentUserId, onClose, setMessage
             headers: {
                 "Content-Type": "application/json",
                 "X-Requested-With": "XMLHttpRequest",
-                "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content,
+                "X-CSRF-TOKEN": document.querySelector(
+                    'meta[name="csrf-token"]'
+                ).content,
             },
             body: JSON.stringify({
                 receiver_id: selectedChat.id,
@@ -58,14 +66,16 @@ const ChatWindow = ({ selectedChat, messages, currentUserId, onClose, setMessage
     useEffect(() => {
         if (!selectedChat) return;
 
-        console.log('Suscribiendo a:', `chat.${currentUserId}`);
-        console.log('currentUserId en ChatWindow:', currentUserId);
+        console.log("Suscribiendo a:", `chat.${currentUserId}`);
+        console.log("currentUserId en ChatWindow:", currentUserId);
 
-        window.Echo.channel(`chat.${currentUserId}`)
-          .listen('MessageSent', (e) => {
-            console.log('Evento recibido:', e);
-            setMessages(prev => [...prev, e.message]);
-          });
+        window.Echo.channel(`chat.${currentUserId}`).listen(
+            "MessageSent",
+            (e) => {
+                console.log("Evento recibido:", e);
+                setMessages((prev) => [...prev, e.message]);
+            }
+        );
 
         return () => {
             window.Echo.leave(`chat.${currentUserId}`);
@@ -96,11 +106,17 @@ const ChatWindow = ({ selectedChat, messages, currentUserId, onClose, setMessage
                     </svg>
                 </button>
                 {/* Avatar del usuario con el que se está chateando */}
-                <img
-                    src={selectedChat.avatarURL}
-                    alt={selectedChat.name}
-                    className="h-10 w-10 rounded-full object-cover"
-                />
+                {selectedChat.avatarURL ? (
+                    <img
+                        src={selectedChat.avatarURL}
+                        alt={selectedChat.name}
+                        className="h-12 w-12 rounded-full object-cover"
+                    />
+                ) : (
+                    <div className="h-12 w-12 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-lg font-semibold text-gray-700 dark:text-gray-300">
+                        {selectedChat.name.charAt(0).toUpperCase()}
+                    </div>
+                )}
                 {/* Nombre del usuario con el que se está chateando */}
                 <h3 className="font-semibold text-gray-900 dark:text-white">
                     {selectedChat.name}
@@ -157,13 +173,13 @@ const ChatWindow = ({ selectedChat, messages, currentUserId, onClose, setMessage
                         rows={1}
                         placeholder="Escribe un mensaje..."
                         value={newMessage}
-                        onChange={e => setNewMessage(e.target.value)}
+                        onChange={(e) => setNewMessage(e.target.value)}
                         className="w-full resize-none overflow-hidden px-4 py-2 rounded-md bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-[#214478] focus:border-[#214478] focus:outline-none"
                         onInput={(e) => {
                             e.target.style.height = "auto";
                             e.target.style.height = `${e.target.scrollHeight}px`;
                         }}
-                        onKeyDown={e => {
+                        onKeyDown={(e) => {
                             if (e.key === "Enter" && !e.shiftKey) {
                                 e.preventDefault();
                                 handleSend();
