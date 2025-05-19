@@ -17,13 +17,16 @@ export default function Login({ status, canResetPassword }) {
         e.preventDefault();
 
         post(route("login"), {
+            onSuccess: () => {
+                window.location.reload(); // <-- Recarga la página tras login exitoso
+            },
             onFinish: () => reset("password"),
         });
     };
 
     return (
         <GuestLayout>
-            <Head title="Log in" />
+            <Head title="Inicia Sesión" />
 
             {status && (
                 <div className="mb-4 text-sm font-medium text-green-600">
@@ -74,7 +77,7 @@ export default function Login({ status, canResetPassword }) {
                                 setData("remember", e.target.checked)
                             }
                         />
-                        <span className="ms-2 text-sm text-white dark:text-white">
+                        <span className="ms-2 text-sm dark:text-white">
                             Recordar
                         </span>
                     </label>
@@ -95,6 +98,19 @@ export default function Login({ status, canResetPassword }) {
                     </PrimaryButton>
                 </div>
             </form>
+
+            {/* Enlace a registro */}
+            <div className="mt-6 text-center">
+                <p className="text-sm dark:text-white">
+                    ¿No tienes una cuenta?{" "}
+                    <Link
+                        href={route("register")}
+                        className="underline text-[#214478]  hover:text-blue-600"
+                    >
+                        Regístrate
+                    </Link>
+                </p>
+            </div>
         </GuestLayout>
     );
 }

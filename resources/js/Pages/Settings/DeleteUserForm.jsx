@@ -30,7 +30,7 @@ export default function DeleteUserForm({ className = "" }) {
     const eliminarUsuario = (e) => {
         e.preventDefault();
 
-        destroy(route("profile.destroy"), {
+        destroy(route("settings.destroy"), {
             preserveScroll: true,
             onSuccess: () => cerrarModal(),
             onError: () => passwordInput.current.focus(),

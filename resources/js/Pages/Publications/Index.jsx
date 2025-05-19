@@ -7,13 +7,28 @@ import {
     PhotographIcon,
     XIcon,
 } from "@heroicons/react/outline";
+import UserMenu from "@/Components/UserMenu";
 
-const csrf = document.querySelector('meta[name="csrf-token"]');
-const csrfToken = csrf ? csrf.getAttribute("content") : "";
+function getCsrfToken() {
+    const csrf = document.querySelector('meta[name="csrf-token"]');
+    return csrf ? csrf.getAttribute("content") : "";
+}
+
+function normalizePublication(pub) {
+    return {
+        ...pub,
+        likedByMe: pub.likedByMe ?? pub.liked_by_me ?? false,
+        likesCount: pub.likesCount ?? pub.likes_count ?? 0,
+        friend_status: pub.friend_status ?? "none",
+        following: pub.following ?? false,
+    };
+}
 
 export default function TwitterStyleFeed({
     authUser,
     publications: initialPublications,
+    friends,
+    followers,
 }) {
     const { props: pageProps } = usePage();
     const { data, setData, post, processing, errors, reset } = useForm(
@@ -26,7 +41,9 @@ export default function TwitterStyleFeed({
     );
     const [showForm, setShowForm] = useState(false);
     const [publications, setPublications] = useState(
-        initialPublications.data || initialPublications
+        (initialPublications.data || initialPublications).map(
+            normalizePublication
+        )
     );
     const [nextPageUrl, setNextPageUrl] = useState(
         initialPublications.links?.next || initialPublications.next_page_url
@@ -34,10 +51,13 @@ export default function TwitterStyleFeed({
     const [loadingMore, setLoadingMore] = useState(false);
 
     useEffect(() => {
-        setPublications(initialPublications.data);
+        setPublications(
+            (initialPublications.data || initialPublications).map(
+                normalizePublication
+            )
+        );
         setNextPageUrl(initialPublications.next_page_url);
     }, [initialPublications]);
-
     const loadMorePublications = async () => {
         if (!nextPageUrl || loadingMore) return;
         setLoadingMore(true);
@@ -50,10 +70,17 @@ export default function TwitterStyleFeed({
             });
             if (!response.ok) throw new Error("Network response was not ok");
             const result = await response.json();
-            setPublications((prev) => [...prev, ...result.data]);
+            setPublications((prev) => [
+                ...prev,
+                ...result.data.map(normalizePublication),
+            ]);
             setNextPageUrl(result.next_page_url);
         } catch (error) {
-            Swal.fire("Error", "No se pudieron cargar más publicaciones.", "error");
+            Swal.fire(
+                "Error",
+                "No se pudieron cargar más publicaciones.",
+                "error"
+            );
         } finally {
             setLoadingMore(false);
         }
@@ -61,7 +88,8 @@ export default function TwitterStyleFeed({
 
     useEffect(() => {
         const handleScroll = () => {
-            const { scrollTop, scrollHeight, clientHeight } = document.documentElement;
+            const { scrollTop, scrollHeight, clientHeight } =
+                document.documentElement;
             const isNearBottom = scrollTop + clientHeight >= scrollHeight - 100;
             if (isNearBottom && nextPageUrl && !loadingMore) {
                 loadMorePublications();
@@ -82,7 +110,7 @@ export default function TwitterStyleFeed({
     };
 
     const handleSubmit = async (e) => {
-        e.preventDefault();
+        if (e && typeof e.preventDefault === "function") e.preventDefault();
 
         Swal.fire({
             title: "Validando contenido...",
@@ -92,27 +120,57 @@ export default function TwitterStyleFeed({
             },
         });
 
-        console.log("Enviando a Gemini:", data.textContent);
         try {
             const geminiRes = await fetch("moderate-text", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                     "X-Requested-With": "XMLHttpRequest",
-                    "X-CSRF-TOKEN": csrfToken,
+                    "X-CSRF-TOKEN": getCsrfToken(),
                 },
                 body: JSON.stringify({ text: data.textContent }),
             });
-            console.log("Respuesta recibida de Gemini");
-            const geminiData = await geminiRes.json();
-            console.log("Datos de Gemini:", geminiData);
+
+            let geminiData;
+            try {
+                geminiData = await geminiRes.json();
+            } catch (jsonErr) {
+                Swal.fire(
+                    "Error",
+                    "Respuesta inesperada del servidor de moderación.",
+                    "error"
+                );
+                setShowForm(false); // <-- CIERRA EL FORMULARIO
+                return;
+            }
+
+            if (!geminiRes.ok) {
+                Swal.fire(
+                    "Error",
+                    geminiData.message || "No se pudo validar el contenido.",
+                    "error"
+                );
+                setShowForm(false); // <-- CIERRA EL FORMULARIO
+                return;
+            }
+
             if (!geminiData.allowed) {
-                Swal.fire("Contenido bloqueado", geminiData.message || "Tu publicación contiene contenido ofensivo.", "warning");
+                Swal.fire(
+                    "Contenido bloqueado",
+                    geminiData.message ||
+                        "Tu publicación contiene contenido ofensivo.",
+                    "warning"
+                );
+                setShowForm(false); // <-- CIERRA EL FORMULARIO
                 return;
             }
         } catch (err) {
-            console.error("Error en fetch:", err);
-            Swal.fire("Error", "No se pudo validar el contenido. Intenta de nuevo.", "error");
+            Swal.fire(
+                "Error",
+                "No se pudo validar el contenido. Intenta de nuevo.",
+                "error"
+            );
+            setShowForm(false); // <-- CIERRA EL FORMULARIO
             return;
         }
 
@@ -134,7 +192,10 @@ export default function TwitterStyleFeed({
             hashtags: [],
         };
 
-        setPublications((prev) => [optimisticPublication, ...prev]);
+        setPublications((prev) => [
+            normalizePublication(optimisticPublication),
+            ...prev,
+        ]);
         setShowForm(false);
 
         post(route("publications.store"), {
@@ -144,11 +205,17 @@ export default function TwitterStyleFeed({
             onSuccess: () => {
                 reset();
                 setData("preview", null);
-                Swal.fire("¡Publicado!", "Tu publicación fue enviada correctamente.", "success");
+                Swal.fire(
+                    "¡Publicado!",
+                    "Tu publicación fue enviada correctamente.",
+                    "success"
+                );
                 if (pageProps.newPublication) {
                     setPublications((prev) => [
                         pageProps.newPublication,
-                        ...prev.filter((p) => p.id !== optimisticPublication.id),
+                        ...prev.filter(
+                            (p) => p.id !== optimisticPublication.id
+                        ),
                     ]);
                 }
             },
@@ -156,9 +223,15 @@ export default function TwitterStyleFeed({
                 setPublications((prev) =>
                     prev.filter((p) => p.id !== optimisticPublication.id)
                 );
-                Swal.fire("Error", "No se pudo publicar. Intenta de nuevo.", "error");
+                Swal.fire(
+                    "Error",
+                    "No se pudo publicar. Intenta de nuevo.",
+                    "error"
+                );
             },
         });
+
+        return false; // <-- Esto previene cualquier submit tradicional
     };
 
     const handleLike = async (publicationId) => {
@@ -166,20 +239,25 @@ export default function TwitterStyleFeed({
             const res = await fetch(`publications/${publicationId}/like`, {
                 method: "POST",
                 headers: {
-                    "X-CSRF-TOKEN": csrfToken,
+                    "X-CSRF-TOKEN": getCsrfToken(),
                     "X-Requested-With": "XMLHttpRequest",
-                    "Accept": "application/json",
+                    Accept: "application/json",
                 },
             });
+            if (res.status === 419) {
+                // Si hay error de CSRF, recarga la página para sincronizar tokens
+                window.location.reload();
+                return;
+            }
             const data = await res.json();
             setPublications((prev) =>
                 prev.map((pub) =>
                     pub.id === publicationId
                         ? {
-                            ...pub,
-                            likedByMe: data.liked,
-                            likesCount: data.count,
-                        }
+                              ...pub,
+                              likedByMe: data.liked,
+                              likesCount: data.count,
+                          }
                         : pub
                 )
             );
@@ -198,9 +276,27 @@ export default function TwitterStyleFeed({
         return new Date(dateString).toLocaleDateString("es-ES", options);
     };
 
+    useEffect(() => {
+        setPublications(
+            (initialPublications.data || initialPublications).map(
+                normalizePublication
+            )
+        );
+        setNextPageUrl(initialPublications.next_page_url);
+    }, [initialPublications]);
+
+    console.log(
+        "is_admin:",
+        authUser.is_admin,
+        "is_moderator:",
+        authUser.is_moderator
+    );
+
     return (
         <AuthenticatedLayout
-            user={authUser}
+            authUser={authUser}
+            friends={friends}
+            followers={followers}
             header={
                 <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 z-10">
                     <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">
@@ -214,11 +310,6 @@ export default function TwitterStyleFeed({
             {/* Área para crear nueva publicación (siempre visible) */}
             <div className="border-b border-gray-200 dark:border-gray-700 p-4">
                 <div className="flex space-x-3">
-                    <img
-                        src={authUser.profile_photo_url}
-                        alt={authUser.name}
-                        className="h-12 w-12 rounded-full object-cover flex-shrink-0"
-                    />
                     <div className="flex-1">
                         <button
                             onClick={() => setShowForm(true)}
@@ -249,11 +340,17 @@ export default function TwitterStyleFeed({
 
                         <form onSubmit={handleSubmit} className="p-4">
                             <div className="flex space-x-3">
-                                <img
-                                    src={authUser.profile_photo_url}
-                                    alt={authUser.name}
-                                    className="h-12 w-12 rounded-full object-cover flex-shrink-0"
-                                />
+                                {authUser.avatarURL ? (
+                                    <img
+                                        src={authUser.avatarURL}
+                                        alt={authUser.name}
+                                        className="h-12 w-12 rounded-full object-cover"
+                                    />
+                                ) : (
+                                    <div className="h-12 w-12 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-lg font-semibold text-gray-700 dark:text-gray-300">
+                                        {authUser.name.charAt(0).toUpperCase()}
+                                    </div>
+                                )}
                                 <div className="flex-1">
                                     <textarea
                                         value={data.textContent}
@@ -352,20 +449,103 @@ export default function TwitterStyleFeed({
                                 className="p-4 hover:bg-gray-50 dark:hover:bg-gray-900 transition"
                             >
                                 <div className="flex space-x-3">
-                                    <img
-                                        src={
-                                            publication.user
-                                                .profile_photo_url ||
-                                            "/default-user.png"
-                                        }
-                                        alt={publication.user.name}
-                                        className="h-12 w-12 rounded-full object-cover"
-                                    />
+                                    {publication.user.avatarURL ? (
+                                        <img
+                                            src={publication.user.avatarURL}
+                                            alt={publication.user.name}
+                                            className="h-12 w-12 rounded-full object-cover"
+                                        />
+                                    ) : (
+                                        <div className="h-12 w-12 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-lg font-semibold text-gray-700 dark:text-gray-300">
+                                            {publication.user.name
+                                                .charAt(0)
+                                                .toUpperCase()}
+                                        </div>
+                                    )}
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center space-x-1">
                                             <p className="font-bold truncate text-gray-900 dark:text-gray-100">
                                                 {publication.user.name}
                                             </p>
+
+                                            <UserMenu
+                                                userId={publication.user.id}
+                                                publicationId={publication.id}
+                                                friendStatus={
+                                                    publication.friend_status ||
+                                                    "none"
+                                                }
+                                                onFriendStatusChange={(
+                                                    status
+                                                ) => {
+                                                    setPublications((prev) =>
+                                                        prev.map((pub) =>
+                                                            pub.user.id ===
+                                                            publication.user.id
+                                                                ? {
+                                                                      ...pub,
+                                                                      friend_status:
+                                                                          status,
+                                                                  }
+                                                                : pub
+                                                        )
+                                                    );
+                                                }}
+                                                isOwner={
+                                                    authUser.id ===
+                                                    publication.user.id
+                                                }
+                                                isAdmin={
+                                                    authUser.is_admin ||
+                                                    authUser.is_moderator
+                                                }
+                                                following={
+                                                    publication.following ||
+                                                    false
+                                                }
+                                                onToggleFollow={(
+                                                    userId,
+                                                    following
+                                                ) => {
+                                                    setPublications((prev) =>
+                                                        prev.map((pub) =>
+                                                            pub.user.id ===
+                                                            userId
+                                                                ? {
+                                                                      ...pub,
+                                                                      following,
+                                                                  }
+                                                                : pub
+                                                        )
+                                                    );
+                                                }}
+                                                onFriendRemoved={() => {
+                                                    setPublications((prev) =>
+                                                        prev.map((pub) =>
+                                                            pub.user.id ===
+                                                            publication.user.id
+                                                                ? {
+                                                                      ...pub,
+                                                                      friend_status:
+                                                                          "none",
+                                                                  }
+                                                                : pub
+                                                        )
+                                                    );
+                                                }}
+                                                onDeletePublication={(
+                                                    publicationId
+                                                ) => {
+                                                    setPublications((prev) =>
+                                                        prev.filter(
+                                                            (pub) =>
+                                                                pub.id !==
+                                                                publicationId
+                                                        )
+                                                    );
+                                                }}
+                                            />
+
                                             <span className="text-gray-500 dark:text-gray-400">
                                                 ·
                                             </span>
@@ -390,100 +570,163 @@ export default function TwitterStyleFeed({
                                         )}
 
                                         <div className="mt-3 flex justify-between max-w-md">
-                                           <button
-    type="button"
-    className="flex items-center space-x-1 text-gray-500 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400 group"
-    onClick={() => window.location.href = `publications/${publication.id}`}
->
-    <div className="p-2 rounded-full group-hover:bg-blue-50 dark:group-hover:bg-blue-900">
-        <svg
-            className="h-5 w-5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-        >
-            <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-            />
-        </svg>
-    </div>
-    <span className="text-sm">
-        {publication.responsesCount ?? 0}
-    </span>
-</button>
-                                           <button
-    className={`flex items-center space-x-1 ${
-        publication.likedByMe ? "text-red-500" : "text-gray-500 dark:text-gray-300"
-    } hover:text-red-500 dark:hover:text-red-400 group`}
-    onClick={() => handleLike(publication.id)}
->
-    <div className="p-2 rounded-full group-hover:bg-red-50 dark:group-hover:bg-red-900">
-        {publication.likedByMe ? (
-            // Corazón relleno
-            <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" />
-            </svg>
-        ) : (
-            // Corazón vacío
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                    d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-            </svg>
-        )}
-    </div>
-    <span className="text-sm">{publication.likesCount}</span>
-</button>
+                                            <button
+                                                type="button"
+                                                className="flex items-center space-x-1 text-gray-500 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400 group"
+                                                onClick={() =>
+                                                    (window.location.href = `publications/${publication.id}`)
+                                                }
+                                            >
+                                                <div className="p-2 rounded-full group-hover:bg-blue-50 dark:group-hover:bg-blue-900">
+                                                    <svg
+                                                        className="h-5 w-5"
+                                                        fill="none"
+                                                        viewBox="0 0 24 24"
+                                                        stroke="currentColor"
+                                                    >
+                                                        <path
+                                                            strokeLinecap="round"
+                                                            strokeLinejoin="round"
+                                                            strokeWidth={2}
+                                                            d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                                                        />
+                                                    </svg>
+                                                </div>
+                                                <span className="text-sm">
+                                                    {publication.responsesCount ??
+                                                        0}
+                                                </span>
+                                            </button>
+                                            <button
+                                                className={`flex items-center space-x-1 ${
+                                                    publication.likedByMe
+                                                        ? "text-red-500"
+                                                        : "text-gray-500 dark:text-gray-300"
+                                                } hover:text-red-500 dark:hover:text-red-400 group`}
+                                                onClick={() =>
+                                                    handleLike(publication.id)
+                                                }
+                                            >
+                                                <div className="p-2 rounded-full group-hover:bg-red-50 dark:group-hover:bg-red-900">
+                                                    {publication.likedByMe ? (
+                                                        // Corazón relleno
+                                                        <svg
+                                                            className="h-5 w-5"
+                                                            fill="currentColor"
+                                                            viewBox="0 0 20 20"
+                                                        >
+                                                            <path d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" />
+                                                        </svg>
+                                                    ) : (
+                                                        // Corazón vacío
+                                                        <svg
+                                                            className="h-5 w-5"
+                                                            fill="none"
+                                                            stroke="currentColor"
+                                                            viewBox="0 0 24 24"
+                                                        >
+                                                            <path
+                                                                strokeLinecap="round"
+                                                                strokeLinejoin="round"
+                                                                strokeWidth={2}
+                                                                d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                                                            />
+                                                        </svg>
+                                                    )}
+                                                </div>
+                                                <span className="text-sm">
+                                                    {publication.likesCount}
+                                                </span>
+                                            </button>
 
-                                       <button
-    type="button"
-    className="flex items-center text-gray-500 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400 group"
-    onClick={() => {
-        if (!publication || !publication.id) {
-            Swal.fire("Error", "No se encontró la publicación.", "error");
-            return;
-        }
-        const url = `${window.location.origin}/publications/${publication.id}`;
-        if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
-            navigator.clipboard.writeText(url).then(() => {
-                Swal.fire("¡Enlace copiado!", "El enlace de la publicación se ha copiado al portapapeles.", "success");
-            }).catch(() => {
-                Swal.fire("Error", "No se pudo copiar el enlace al portapapeles.", "error");
-            });
-        } else {
-            // Fallback: selecciona y copia usando un input temporal
-            const tempInput = document.createElement("input");
-            tempInput.value = url;
-            document.body.appendChild(tempInput);
-            tempInput.select();
-            try {
-                document.execCommand("copy");
-                Swal.fire("¡Enlace copiado!", "El enlace de la publicación se ha copiado al portapapeles.", "success");
-            } catch {
-                Swal.fire("Error", "No se pudo copiar el enlace al portapapeles.", "error");
-            }
-            document.body.removeChild(tempInput);
-        }
-    }}
->
-    <div className="p-2 rounded-full group-hover:bg-blue-50 dark:group-hover:bg-blue-900">
-        <svg
-            className="h-5 w-5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-        >
-            <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
-            />
-        </svg>
-    </div>
-</button>
+                                            <button
+                                                type="button"
+                                                className="flex items-center text-gray-500 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400 group"
+                                                onClick={() => {
+                                                    if (
+                                                        !publication ||
+                                                        !publication.id
+                                                    ) {
+                                                        Swal.fire(
+                                                            "Error",
+                                                            "No se encontró la publicación.",
+                                                            "error"
+                                                        );
+                                                        return;
+                                                    }
+                                                    const url = `${window.location.origin}/publications/${publication.id}`;
+                                                    if (
+                                                        navigator.clipboard &&
+                                                        typeof navigator
+                                                            .clipboard
+                                                            .writeText ===
+                                                            "function"
+                                                    ) {
+                                                        navigator.clipboard
+                                                            .writeText(url)
+                                                            .then(() => {
+                                                                Swal.fire(
+                                                                    "¡Enlace copiado!",
+                                                                    "El enlace de la publicación se ha copiado al portapapeles.",
+                                                                    "success"
+                                                                );
+                                                            })
+                                                            .catch(() => {
+                                                                Swal.fire(
+                                                                    "Error",
+                                                                    "No se pudo copiar el enlace al portapapeles.",
+                                                                    "error"
+                                                                );
+                                                            });
+                                                    } else {
+                                                        // Fallback: selecciona y copia usando un input temporal
+                                                        const tempInput =
+                                                            document.createElement(
+                                                                "input"
+                                                            );
+                                                        tempInput.value = url;
+                                                        document.body.appendChild(
+                                                            tempInput
+                                                        );
+                                                        tempInput.select();
+                                                        try {
+                                                            document.execCommand(
+                                                                "copy"
+                                                            );
+                                                            Swal.fire(
+                                                                "¡Enlace copiado!",
+                                                                "El enlace de la publicación se ha copiado al portapapeles.",
+                                                                "success"
+                                                            );
+                                                        } catch {
+                                                            Swal.fire(
+                                                                "Error",
+                                                                "No se pudo copiar el enlace al portapapeles.",
+                                                                "error"
+                                                            );
+                                                        }
+                                                        document.body.removeChild(
+                                                            tempInput
+                                                        );
+                                                    }
+                                                }}
+                                            >
+                                                <div className="p-2 rounded-full group-hover:bg-blue-50 dark:group-hover:bg-blue-900">
+                                                    <svg
+                                                        className="h-5 w-5"
+                                                        fill="none"
+                                                        viewBox="0 0 24 24"
+                                                        stroke="currentColor"
+                                                    >
+                                                        <path
+                                                            strokeLinecap="round"
+                                                            strokeLinejoin="round"
+                                                            strokeWidth={2}
+                                                            d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
+                                                        />
+                                                    </svg>
+                                                </div>
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
