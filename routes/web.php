@@ -1,16 +1,30 @@
 <?php
 
-use App\Http\Controllers\Admin\AdminUserController as AdminUserController;
+use App\Http\Controllers\Admin\AdminUserController;
 use App\Http\Controllers\ProfileController;
-use Illuminate\Foundation\Application;
-use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
 use App\Http\Controllers\PublicationController;
-use App\Http\Controllers\ChatController; // Asegúrate de importar tu controlador de chat
+use App\Http\Controllers\ChatController;
 use App\Http\Controllers\ModerationController;
 use App\Http\Controllers\LikeController;
 use App\Http\Controllers\ResponseController;
+use Illuminate\Foundation\Application;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
+use App\Http\Controllers\FriendshipController;
+use App\Http\Controllers\FollowController;
+use App\Http\Controllers\MessageController; // Asegúrate de importar tu controlador de mensajes
+use Illuminate\Support\Facades\Broadcast;
+use Illuminate\Http\Request;
 
+
+Broadcast::routes(['middleware' => []]);
+
+Route::post('/broadcasting/auth', function (Request $request) {
+    return response()->json(['result' => 'ok']);
+});
+
+// Página de bienvenida
 Route::get('/', function () {
     return Inertia::render('Welcome', [
         'canLogin' => Route::has('login'),
@@ -20,55 +34,64 @@ Route::get('/', function () {
     ]);
 });
 
+// Dashboard
 Route::get('/dashboard', function () {
     return Inertia::render('Dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
 
+// Perfil de usuario (con controlador sería mejor a futuro)
+Route::get('/profile', function () {
+    return Inertia::render('Profile', [
+        'auth' => [
+            'user' => Auth::user(),
+        ],
+    ]);
+})->middleware(['auth', 'verified'])->name('profile');
+
+// Ajustes de perfil
 Route::middleware('auth')->group(function () {
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    Route::get('/settings', [ProfileController::class, 'edit'])->name('settings.edit');
+    Route::patch('/settings', [ProfileController::class, 'update'])->name('settings.update');
+    Route::delete('/settings', [ProfileController::class, 'destroy'])->name('settings.destroy');
 });
 
+// Autenticación
 require __DIR__.'/auth.php';
 
-Route::get('/users', [AdminUserController::class, 'index'])->middleware(['auth', 'verified'])
-    ->name('admin.users.index');
-
-// Rutas del Panel de Administración de Usuarios
+// Administración de usuarios
 Route::middleware(['auth', 'verified'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/users', [AdminUserController::class, 'index'])->name('users.index');
 
-    Route::middleware(['permission:editar usuarios']) // Solo Admin
+    Route::middleware(['permission:editar usuarios'])
         ->put('/users/{user}', [AdminUserController::class, 'update'])
         ->name('users.update');
 
-    Route::middleware(['permission:banear usuarios']) // Admin y Moderador
+    Route::middleware(['permission:banear usuarios'])
         ->delete('/users/{user}', [AdminUserController::class, 'ban'])
         ->name('users.ban');
 
-    Route::middleware(['permission:desbanear usuarios']) // Admin y Moderador
+    Route::middleware(['permission:desbanear usuarios'])
         ->post('/users/{user}/restore', [AdminUserController::class, 'restore'])
         ->name('users.restore');
 });
 
-Route::resource('publications', PublicationController::class);
-
-Route::get('/publications', [PublicationController::class, 'index'])->name('publications.index');
-
+// Publicaciones (solo para usuarios autenticados)
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('/publications', [PublicationController::class, 'index'])
-        ->name('publications.index');
-
-    Route::post('/publications', [PublicationController::class, 'store'])
-        ->name('publications.store');
+    Route::resource('publications', PublicationController::class)->only(['index', 'store', 'show']);
+    Route::post('/publications/{publication}/like', [LikeController::class, 'toggle'])->name('publications.like');
+    Route::post('/publications/{publication}/responses', [ResponseController::class, 'store'])->name('responses.store');
+    Route::put('/responses/{response}', [ResponseController::class, 'update'])->name('responses.update');
+    Route::delete('/responses/{response}', [ResponseController::class, 'destroy'])->name('responses.destroy');
 });
 
+// Chat
 Route::get('/chat', [ChatController::class, 'index'])->name('chat.index');
 
-
+// Moderación de texto
 Route::post('/moderate-text', [ModerationController::class, 'moderate'])
     ->middleware('auth')->name('moderate-text');
 
+// Página de test de moderación
 Route::view('/moderate-test', 'moderate-test');
 
 Route::post('/publications/{publication}/like', [LikeController::class, 'toggle'])->middleware('auth');
@@ -77,3 +100,22 @@ Route::get('/publications/{publication}', [PublicationController::class, 'show']
 Route::post('/publications/{publication}/responses', [ResponseController::class, 'store'])->name('responses.store')->middleware('auth');
 Route::put('/responses/{response}', [ResponseController::class, 'update'])->name('responses.update')->middleware('auth');
 Route::delete('/responses/{response}', [ResponseController::class, 'destroy'])->name('responses.destroy')->middleware('auth');
+
+Route::middleware('auth')->group(function () {
+    Route::post('/friendships/send/{receiver_id}', [FriendshipController::class, 'sendRequest']);
+    Route::post('/friendships/accept/{id}', [FriendshipController::class, 'acceptRequest']);
+    Route::post('/friendships/reject/{id}', [FriendshipController::class, 'rejectRequest']);
+    Route::get('/friendships/received', [FriendshipController::class, 'receivedRequests']);
+    Route::get('/friendships/sent', [FriendshipController::class, 'sentRequests']);
+    Route::post('/friendships/remove/{userId}', [FriendshipController::class, 'removeFriend']);
+});
+
+Route::middleware('auth')->post('/follow/{userId}', [FollowController::class, 'toggle']);
+Route::delete('/publications/{publication}', [PublicationController::class, 'destroy'])
+    ->middleware('auth');
+
+Route::get('/alerts', [App\Http\Controllers\AlertController::class, 'index'])->middleware('auth');
+Route::get('/alerts/data', [App\Http\Controllers\AlertController::class, 'index'])->middleware('auth');
+
+Route::middleware('auth')->get('/messages/{friendId}', [MessageController::class, 'conversation']);
+Route::post('/messages/send', [MessageController::class, 'send'])->middleware('auth');

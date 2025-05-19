@@ -28,6 +28,8 @@
         "@inertiajs/inertia": "^0.11.1",
         "@inertiajs/progress": "^0.1.2",
         "@tsparticles/react": "^3.0.0",
+        "laravel-echo": "^2.1.4",
+        "pusher-js": "^8.4.0",
         "react-icons": "^5.5.0",
         "sonner": "^2.0.3",
         "sweetalert2": "^11.6.13",
