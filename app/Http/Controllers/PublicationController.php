@@ -123,11 +123,27 @@ public function store(Request $request)
         'imageURL' => $imageURL,
     ])->load('user', 'hashtags');
 
-    // Respuesta para Inertia
-    return back()->with([
-        'success' => 'Publicación creada con éxito',
-        'newPublication' => $publication
-    ]);
+    // Agregar campos extra igual que en index
+    $publication->likesCount = 0;
+    $publication->responsesCount = 0;
+    $publication->likedByMe = false;
+
+    $authUserId = $request->user() ? $request->user()->id : null;
+    $friendship = \App\Models\Friendship::where(function($q) use ($publication, $authUserId) {
+        $q->where('sender_id', $authUserId)->where('receiver_id', $publication->user_id);
+    })->orWhere(function($q) use ($publication, $authUserId) {
+        $q->where('sender_id', $publication->user_id)->where('receiver_id', $authUserId);
+    })->first();
+
+    $publication->friend_status = $friendship ? $friendship->status : 'none';
+
+    $following = \App\Models\Following::where('follower_id', $authUserId)
+        ->where('followed_id', $publication->user_id)
+        ->exists();
+
+    $publication->following = $following;
+
+    return redirect()->route('publications.index')->with('success', 'Publicación creada con éxito.');
 }
     /**
      * Mostrar una publicación específica.
