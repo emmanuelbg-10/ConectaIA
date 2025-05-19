@@ -8,6 +8,7 @@ use App\Models\Mention;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Cloudinary\Api\Exception\ApiException;
 use CloudinaryLabs\CloudinaryLaravel\Facades\Cloudinary;
 
 class PublicationController extends Controller
@@ -60,27 +61,31 @@ class PublicationController extends Controller
             'textContent' => 'required|string|max:500',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
-
+    
         $imageURL = null;
-
+    
         if ($request->hasFile('image')) {
             $uploadedFile = $request->file('image');
-        
-            $uploaded = Cloudinary::uploadApi()->upload($uploadedFile->getRealPath(), [
-                'resource_type' => 'image',
-            ]);
-            
-        
-            $imageURL = $uploaded['secure_url'];
+    
+            try {
+                $base64Image = 'data:' . $uploadedFile->getMimeType() . ';base64,' . base64_encode($uploadedFile->getContent());
+    
+                $uploaded = Cloudinary::uploadApi()->upload($base64Image, [
+                    'resource_type' => 'image',
+                ]);
+    
+                $imageURL = $uploaded['secure_url'];
+            } catch (\Cloudinary\Api\Exception\ApiException $e) {
+                dd("Error de Cloudinary:", $e->getMessage());
+            }
         }
-        
-
+    
         $publication = Publication::create([
             'user_id' => auth()->id(),
             'textContent' => $validated['textContent'],
             'imageURL' => $imageURL,
         ])->load('user', 'hashtags');
-
+    
         return back()->with([
             'success' => 'Publicación creada con éxito',
             'newPublication' => $publication,
