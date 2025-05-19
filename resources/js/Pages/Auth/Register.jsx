@@ -25,7 +25,7 @@ export default function Register() {
         <GuestLayout>
             <Head title="Registro" />
 
-            <form onSubmit={submit}>
+            <form onSubmit={submit} className="bg-black opacity-75 px-10 py-5 rounded-lg">
                 <div>
                     <InputLabel htmlFor="name" value="Nombre de usuario" />
 
