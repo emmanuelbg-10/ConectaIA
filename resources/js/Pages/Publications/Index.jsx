@@ -7,13 +7,28 @@ import {
     PhotographIcon,
     XIcon,
 } from "@heroicons/react/outline";
+import UserMenu from "@/Components/UserMenu";
 
-const csrf = document.querySelector('meta[name="csrf-token"]');
-const csrfToken = csrf ? csrf.getAttribute("content") : "";
+function getCsrfToken() {
+    const csrf = document.querySelector('meta[name="csrf-token"]');
+    return csrf ? csrf.getAttribute("content") : "";
+}
+
+function normalizePublication(pub) {
+    return {
+        ...pub,
+        likedByMe: pub.likedByMe ?? pub.liked_by_me ?? false,
+        likesCount: pub.likesCount ?? pub.likes_count ?? 0,
+        friend_status: pub.friend_status ?? "none",
+        following: pub.following ?? false,
+    };
+}
 
 export default function TwitterStyleFeed({
     authUser,
     publications: initialPublications,
+    friends,
+    followers,
 }) {
     const { props: pageProps } = usePage();
     const { data, setData, post, processing, errors, reset } = useForm(
@@ -26,7 +41,9 @@ export default function TwitterStyleFeed({
     );
     const [showForm, setShowForm] = useState(false);
     const [publications, setPublications] = useState(
-        initialPublications.data || initialPublications
+        (initialPublications.data || initialPublications).map(
+            normalizePublication
+        )
     );
     const [nextPageUrl, setNextPageUrl] = useState(
         initialPublications.links?.next || initialPublications.next_page_url
@@ -34,10 +51,13 @@ export default function TwitterStyleFeed({
     const [loadingMore, setLoadingMore] = useState(false);
 
     useEffect(() => {
-        setPublications(initialPublications.data);
+        setPublications(
+            (initialPublications.data || initialPublications).map(
+                normalizePublication
+            )
+        );
         setNextPageUrl(initialPublications.next_page_url);
     }, [initialPublications]);
-
     const loadMorePublications = async () => {
         if (!nextPageUrl || loadingMore) return;
         setLoadingMore(true);
@@ -50,7 +70,10 @@ export default function TwitterStyleFeed({
             });
             if (!response.ok) throw new Error("Network response was not ok");
             const result = await response.json();
-            setPublications((prev) => [...prev, ...result.data]);
+            setPublications((prev) => [
+                ...prev,
+                ...result.data.map(normalizePublication),
+            ]);
             setNextPageUrl(result.next_page_url);
         } catch (error) {
             Swal.fire(
@@ -87,7 +110,7 @@ export default function TwitterStyleFeed({
     };
 
     const handleSubmit = async (e) => {
-        e.preventDefault();
+        if (e && typeof e.preventDefault === "function") e.preventDefault();
 
         Swal.fire({
             title: "Validando contenido...",
@@ -97,20 +120,40 @@ export default function TwitterStyleFeed({
             },
         });
 
-        console.log("Enviando a Gemini:", data.textContent);
         try {
             const geminiRes = await fetch("moderate-text", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                     "X-Requested-With": "XMLHttpRequest",
-                    "X-CSRF-TOKEN": csrfToken,
+                    "X-CSRF-TOKEN": getCsrfToken(),
                 },
                 body: JSON.stringify({ text: data.textContent }),
             });
-            console.log("Respuesta recibida de Gemini");
-            const geminiData = await geminiRes.json();
-            console.log("Datos de Gemini:", geminiData);
+
+            let geminiData;
+            try {
+                geminiData = await geminiRes.json();
+            } catch (jsonErr) {
+                Swal.fire(
+                    "Error",
+                    "Respuesta inesperada del servidor de moderación.",
+                    "error"
+                );
+                setShowForm(false); // <-- CIERRA EL FORMULARIO
+                return;
+            }
+
+            if (!geminiRes.ok) {
+                Swal.fire(
+                    "Error",
+                    geminiData.message || "No se pudo validar el contenido.",
+                    "error"
+                );
+                setShowForm(false); // <-- CIERRA EL FORMULARIO
+                return;
+            }
+
             if (!geminiData.allowed) {
                 Swal.fire(
                     "Contenido bloqueado",
@@ -118,15 +161,16 @@ export default function TwitterStyleFeed({
                         "Tu publicación contiene contenido ofensivo.",
                     "warning"
                 );
+                setShowForm(false); // <-- CIERRA EL FORMULARIO
                 return;
             }
         } catch (err) {
-            console.error("Error en fetch:", err);
             Swal.fire(
                 "Error",
                 "No se pudo validar el contenido. Intenta de nuevo.",
                 "error"
             );
+            setShowForm(false); // <-- CIERRA EL FORMULARIO
             return;
         }
 
@@ -148,7 +192,10 @@ export default function TwitterStyleFeed({
             hashtags: [],
         };
 
-        setPublications((prev) => [optimisticPublication, ...prev]);
+        setPublications((prev) => [
+            normalizePublication(optimisticPublication),
+            ...prev,
+        ]);
         setShowForm(false);
 
         post(route("publications.store"), {
@@ -183,6 +230,8 @@ export default function TwitterStyleFeed({
                 );
             },
         });
+
+        return false; // <-- Esto previene cualquier submit tradicional
     };
 
     const handleLike = async (publicationId) => {
@@ -190,11 +239,16 @@ export default function TwitterStyleFeed({
             const res = await fetch(`publications/${publicationId}/like`, {
                 method: "POST",
                 headers: {
-                    "X-CSRF-TOKEN": csrfToken,
+                    "X-CSRF-TOKEN": getCsrfToken(),
                     "X-Requested-With": "XMLHttpRequest",
                     Accept: "application/json",
                 },
             });
+            if (res.status === 419) {
+                // Si hay error de CSRF, recarga la página para sincronizar tokens
+                window.location.reload();
+                return;
+            }
             const data = await res.json();
             setPublications((prev) =>
                 prev.map((pub) =>
@@ -222,9 +276,27 @@ export default function TwitterStyleFeed({
         return new Date(dateString).toLocaleDateString("es-ES", options);
     };
 
+    useEffect(() => {
+        setPublications(
+            (initialPublications.data || initialPublications).map(
+                normalizePublication
+            )
+        );
+        setNextPageUrl(initialPublications.next_page_url);
+    }, [initialPublications]);
+
+    console.log(
+        "is_admin:",
+        authUser.is_admin,
+        "is_moderator:",
+        authUser.is_moderator
+    );
+
     return (
         <AuthenticatedLayout
-            user={authUser}
+            authUser={authUser}
+            friends={friends}
+            followers={followers}
             header={
                 <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 z-10">
                     <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">
@@ -395,6 +467,85 @@ export default function TwitterStyleFeed({
                                             <p className="font-bold truncate text-gray-900 dark:text-gray-100">
                                                 {publication.user.name}
                                             </p>
+
+                                            <UserMenu
+                                                userId={publication.user.id}
+                                                publicationId={publication.id}
+                                                friendStatus={
+                                                    publication.friend_status ||
+                                                    "none"
+                                                }
+                                                onFriendStatusChange={(
+                                                    status
+                                                ) => {
+                                                    setPublications((prev) =>
+                                                        prev.map((pub) =>
+                                                            pub.user.id ===
+                                                            publication.user.id
+                                                                ? {
+                                                                      ...pub,
+                                                                      friend_status:
+                                                                          status,
+                                                                  }
+                                                                : pub
+                                                        )
+                                                    );
+                                                }}
+                                                isOwner={
+                                                    authUser.id ===
+                                                    publication.user.id
+                                                }
+                                                isAdmin={
+                                                    authUser.is_admin ||
+                                                    authUser.is_moderator
+                                                }
+                                                following={
+                                                    publication.following ||
+                                                    false
+                                                }
+                                                onToggleFollow={(
+                                                    userId,
+                                                    following
+                                                ) => {
+                                                    setPublications((prev) =>
+                                                        prev.map((pub) =>
+                                                            pub.user.id ===
+                                                            userId
+                                                                ? {
+                                                                      ...pub,
+                                                                      following,
+                                                                  }
+                                                                : pub
+                                                        )
+                                                    );
+                                                }}
+                                                onFriendRemoved={() => {
+                                                    setPublications((prev) =>
+                                                        prev.map((pub) =>
+                                                            pub.user.id ===
+                                                            publication.user.id
+                                                                ? {
+                                                                      ...pub,
+                                                                      friend_status:
+                                                                          "none",
+                                                                  }
+                                                                : pub
+                                                        )
+                                                    );
+                                                }}
+                                                onDeletePublication={(
+                                                    publicationId
+                                                ) => {
+                                                    setPublications((prev) =>
+                                                        prev.filter(
+                                                            (pub) =>
+                                                                pub.id !==
+                                                                publicationId
+                                                        )
+                                                    );
+                                                }}
+                                            />
+
                                             <span className="text-gray-500 dark:text-gray-400">
                                                 ·
                                             </span>

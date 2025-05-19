@@ -11,6 +11,18 @@ use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+use App\Http\Controllers\FriendshipController;
+use App\Http\Controllers\FollowController;
+use App\Http\Controllers\MessageController; // Asegúrate de importar tu controlador de mensajes
+use Illuminate\Support\Facades\Broadcast;
+use Illuminate\Http\Request;
+
+
+Broadcast::routes(['middleware' => []]);
+
+Route::post('/broadcasting/auth', function (Request $request) {
+    return response()->json(['result' => 'ok']);
+});
 
 // Página de bienvenida
 Route::get('/', function () {
@@ -82,7 +94,28 @@ Route::post('/moderate-text', [ModerationController::class, 'moderate'])
 // Página de test de moderación
 Route::view('/moderate-test', 'moderate-test');
 
-// Notificaciones
-Route::get('/notifications', function () {
-    return Inertia::render('Notifications/Index');
-})->middleware('auth')->name('notifications.index');
+Route::post('/publications/{publication}/like', [LikeController::class, 'toggle'])->middleware('auth');
+Route::get('/publications/{publication}', [PublicationController::class, 'show'])->name('publications.show');
+
+Route::post('/publications/{publication}/responses', [ResponseController::class, 'store'])->name('responses.store')->middleware('auth');
+Route::put('/responses/{response}', [ResponseController::class, 'update'])->name('responses.update')->middleware('auth');
+Route::delete('/responses/{response}', [ResponseController::class, 'destroy'])->name('responses.destroy')->middleware('auth');
+
+Route::middleware('auth')->group(function () {
+    Route::post('/friendships/send/{receiver_id}', [FriendshipController::class, 'sendRequest']);
+    Route::post('/friendships/accept/{id}', [FriendshipController::class, 'acceptRequest']);
+    Route::post('/friendships/reject/{id}', [FriendshipController::class, 'rejectRequest']);
+    Route::get('/friendships/received', [FriendshipController::class, 'receivedRequests']);
+    Route::get('/friendships/sent', [FriendshipController::class, 'sentRequests']);
+    Route::post('/friendships/remove/{userId}', [FriendshipController::class, 'removeFriend']);
+});
+
+Route::middleware('auth')->post('/follow/{userId}', [FollowController::class, 'toggle']);
+Route::delete('/publications/{publication}', [PublicationController::class, 'destroy'])
+    ->middleware('auth');
+
+Route::get('/alerts', [App\Http\Controllers\AlertController::class, 'index'])->middleware('auth');
+Route::get('/alerts/data', [App\Http\Controllers\AlertController::class, 'index'])->middleware('auth');
+
+Route::middleware('auth')->get('/messages/{friendId}', [MessageController::class, 'conversation']);
+Route::post('/messages/send', [MessageController::class, 'send'])->middleware('auth');
