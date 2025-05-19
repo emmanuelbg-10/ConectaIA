@@ -21,7 +21,6 @@ createInertiaApp({
         root.render(
             <>
                 <App {...props} />
-                {props.initialPage.component?.includes("Auth") && <Background />}
             </>
         );
     },

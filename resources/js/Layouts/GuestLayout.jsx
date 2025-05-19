@@ -6,6 +6,7 @@ export default function GuestLayout({ children }) {
     return (
         <div className="relative min-h-screen bg-white dark:bg-black overflow-hidden">
             {/* Contenedor principal sobre el fondo */}
+            <Background/>
             <div className="relative z-10 min-h-screen flex items-center justify-center px-4">
                 <div className="w-full max-w-md space-y-8">
                     {/* Logo + ONECTA */}
