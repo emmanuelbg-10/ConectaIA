@@ -18,7 +18,7 @@ class FollowController extends Controller
      * following himself, and then allow to either unfollow or follow another user, and then
      * finally returning a JSON indicating whether they're following or not the other user.
      * 
-     * @param \App\Models\User $userId
+     * @param int $userId
      * The current user's ID.
      * 
      * @return \Illuminate\Http\JsonResponse
