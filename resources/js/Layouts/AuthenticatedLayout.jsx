@@ -78,7 +78,7 @@ export default function AuthenticatedLayout({ children }) {
         <div className="min-h-screen w-full bg-white text-black dark:bg-black flex">
             {/* Sidebar principal */}
             <aside className="hidden md:flex lg:flex flex-col justify-center items-center gap-8 bg-white dark:bg-black border-r dark:border-gray-800 w-64 max-w-[100vw] md:w-48 lg:w-64 py-8 fixed top-0 left-0 h-screen z-40 overflow-y-auto">
-                <Link href="/">
+                <Link href="/dashboard">
                     <ApplicationLogo className="h-16 w-16 text-black dark:text-white" />
                 </Link>
                 <NavLink

@@ -53,3 +53,4 @@ export default function ForgotPassword({ status }) {
         </GuestLayout>
     );
 }
+
