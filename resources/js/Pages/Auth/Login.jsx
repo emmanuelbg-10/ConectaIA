@@ -25,7 +25,7 @@ export default function Login({ status, canResetPassword }) {
     };
 
     return (
-        <GuestLayout>
+        <>
             <Head title="Inicia Sesión" />
 
             {status && (
@@ -111,6 +111,8 @@ export default function Login({ status, canResetPassword }) {
                     </Link>
                 </p>
             </div>
-        </GuestLayout>
+        </>
     );
 }
+
+Login.layout = (page) => <GuestLayout children={page}/>;

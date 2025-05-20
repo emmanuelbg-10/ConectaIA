@@ -16,7 +16,7 @@ export default function ForgotPassword({ status }) {
     };
 
     return (
-        <GuestLayout>
+        <>
             <Head title="Olvidé mi Contraseña" />
 
             <div className="mb-4 text-sm text-gray-600 dark:text-gray-200">
@@ -50,6 +50,8 @@ export default function ForgotPassword({ status }) {
                     </PrimaryButton>
                 </div>
             </form>
-        </GuestLayout>
+        </>
     );
 }
+
+ForgotPassword.layout = (page) => <GuestLayout children={page}/>;

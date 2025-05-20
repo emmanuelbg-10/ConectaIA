@@ -19,7 +19,7 @@ export default function ConfirmPassword() {
     };
 
     return (
-        <GuestLayout>
+        <>
             <Head title="Confirmar Contraseña" />
 
             <div className="mb-4 text-sm text-gray-600">
@@ -50,6 +50,8 @@ export default function ConfirmPassword() {
                     </PrimaryButton>
                 </div>
             </form>
-        </GuestLayout>
+        </>
     );
 }
+
+ConfirmPassword.layout = (page) => <GuestLayout children={page}/>;
