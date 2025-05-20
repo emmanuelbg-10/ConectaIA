@@ -19,7 +19,6 @@ createInertiaApp({
         ),
     setup({ el, App, props }) {
         const root = createRoot(el);
-        // Detectar si la página usa GuestLayout
         const isGuest = props.initialPage?.component?.toLowerCase().includes('auth/') || props.initialPage?.component === 'Welcome';
         root.render(
             <>
