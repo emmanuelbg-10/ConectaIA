@@ -30,5 +30,11 @@ class Hashtag extends Model
         return $this->belongsToMany(Publication::class, 'hashtag_publications');
     }
     
+    /**
+     * The user that sends the hashtag.
+     * 
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     * Returns a one-to-one relationship instance.
+     */
     public function sender() { return $this->belongsTo(User::class, 'sender_id'); }
 }
