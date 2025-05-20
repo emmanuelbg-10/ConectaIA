@@ -370,7 +370,7 @@ export default function TwitterStyleFeed({
                                             <img
                                                 src={data.preview}
                                                 alt="Previsualización"
-                                                className="rounded-xl max-h-80 w-full object-cover"
+                                                className="rounded-xl w-full h-auto object-contain max-h-96 block"
                                             />
                                             <button
                                                 type="button"
@@ -564,7 +564,7 @@ export default function TwitterStyleFeed({
                                                 <img
                                                     src={publication.imageURL}
                                                     alt="Publicación"
-                                                    className="w-full h-auto max-h-96 object-cover"
+                                                    className="w-full h-auto object-contain max-h-96 block"
                                                 />
                                             </div>
                                         )}

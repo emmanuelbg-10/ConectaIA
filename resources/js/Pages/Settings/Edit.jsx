@@ -4,6 +4,7 @@ import UpdatePasswordForm from "./UpdatePasswordForm";
 import UpdateProfileInformationForm from "./UpdateProfileInformationForm";
 import { Link } from "@inertiajs/react";
 import DeleteUserForm from "./DeleteUserForm";
+import AvatarUploader from "@/Components/AvatarUploader";
 
 export default function Edit({ mustVerifyEmail, status }) {
     const user = usePage().props.auth.user;
@@ -12,7 +13,7 @@ export default function Edit({ mustVerifyEmail, status }) {
         <AuthenticatedLayout>
             <Head title="Ajustes" />
 
-            <div className="py-12">
+            <div className="py-12 flex flex-col items-center justify-center">
                 <div className="mx-auto max-w-7xl space-y-12 sm:px-6 lg:px-8">
                     {/* Mostrar enlace solo si el usuario es admin */}
 

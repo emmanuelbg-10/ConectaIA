@@ -6,11 +6,11 @@ use App\Models\Publication;
 use App\Models\Hashtag;
 use App\Models\Mention;
 use App\Models\User;
+use Cloudinary\Api\Exception\ApiError;
+use Cloudinary\Api\Upload\UploadApi;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
-use Cloudinary\Api\Exception\ApiException;
 use CloudinaryLabs\CloudinaryLaravel\Facades\Cloudinary;
 
 class PublicationController extends Controller
@@ -75,7 +75,7 @@ class PublicationController extends Controller
             ->where('receiver_id', $user->id)
             ->where('status', 'accepted');
     })
-    ->get(['id', 'name', 'profile_photo_url']);
+    ->get(['id', 'name', 'avatarURL' ]);
 
     Log::info('Amigos encontrados:', $friends->toArray());
 
@@ -83,7 +83,7 @@ class PublicationController extends Controller
         'authUser' => [
             'id' => auth()->id(),
             'name' => auth()->user()->name,
-            'profile_photo_url' => auth()->user()->profile_photo_url,
+            'avatarURL' => auth()->user()->avatarURL,
             'is_admin' => auth()->user()->hasRole('administrador'),
             'is_moderator' => auth()->user()->hasRole('moderador'),
             // ...otros campos que necesites
@@ -139,7 +139,7 @@ public function show(Publication $publication)
     {
         $validated = $request->validate([
             'textContent' => 'required|string|max:500',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif',
         ]);
     
         $imageURL = null;
@@ -243,10 +243,36 @@ public function show(Publication $publication)
     /**
      * Eliminar una publicación.
      */
-    public function destroy(Publication $publication)
-    {
-        $publication->delete();
 
-        return redirect()->route('publications.index')->with('success', 'Publicación eliminada con éxito.');
-    }
+     public function destroy(Publication $publication, Request $request)
+     {
+         if (
+             $request->user()->id !== $publication->user_id &&
+             !$request->user()->hasAnyRole(['administrador', 'moderador'])
+         ) {
+             return response()->json(['message' => 'No autorizado.'], 403);
+         }
+     
+         if ($publication->imageURL) {
+             try {
+                 // Extraer ruta y obtener public_id
+                 $path = parse_url($publication->imageURL, PHP_URL_PATH);
+                 $segments = explode('/', $path);
+                 $filenameWithExtension = end($segments);
+                 $publicId = pathinfo($filenameWithExtension, PATHINFO_FILENAME);
+     
+                 (new UploadApi())->destroy($publicId);
+             } catch (ApiError $e) {
+                 Log::error("Error al eliminar imagen de Cloudinary: " . $e->getMessage());
+             }
+         }
+     
+         $publication->delete();
+     
+         if ($request->ajax()) {
+             return response()->json(['message' => 'Publicación eliminada con éxito.']);
+         }
+     
+         return redirect()->route('publications.index')->with('success', 'Publicación eliminada con éxito.');
+     }
 }

@@ -88,6 +88,8 @@ function ResponseItem({
         }
     };
 
+    console.log(response.user);
+
     return (
         <div
             className="py-3 px-4 border-b border-gray-200 dark:border-gray-700"
@@ -611,9 +613,19 @@ export default function Show({ publication, authUser }) {
                 <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6">
                     <div className="flex items-start space-x-3">
                         <div className="flex-shrink-0">
-                            <div className="w-10 h-10 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-sm font-semibold text-gray-700 dark:text-gray-300">
-                                {publication.user.name.charAt(0).toUpperCase()}
-                            </div>
+                            {publication.user.avatarURL ? (
+                                <img
+                                    src={publication.user.avatarURL}
+                                    alt={publication.user.name}
+                                    className="w-10 h-10 rounded-full object-cover"
+                                />
+                            ) : (
+                                <div className="w-10 h-10 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-sm text-gray-700 dark:text-gray-300">
+                                    {publication.user.name
+                                        .charAt(0)
+                                        .toUpperCase()}
+                                </div>
+                            )}
                         </div>
                         <div>
                             <h2 className="font-semibold text-lg text-gray-800 dark:text-gray-200">
