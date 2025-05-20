@@ -142,4 +142,10 @@ public function responses()
 {
     return $this->hasMany(\App\Models\Response::class);
 }
+
+public function friends()
+{
+    return $this->belongsToMany(User::class, 'friendships', 'sender_id', 'receiver_id')
+        ->wherePivot('status', 'accepted');
+}
 }

@@ -14,6 +14,7 @@ import React, { useState, useEffect } from "react";
 import ChatSidebar from "@/Components/ChatSidebar";
 import ChatWindow from "@/Components/ChatWindow";
 import ModalAlerts from "@/Components/ModalAlerts";
+import ModalSearch from "@/Components/ModalSearch";
 
 export default function AuthenticatedLayout({ children, followers, friends, authUser }) {
     const [showingNavigationDropdown] = useState(false);
@@ -28,6 +29,7 @@ export default function AuthenticatedLayout({ children, followers, friends, auth
         recentFollowers: [],
     });
     const [hasNewAlerts, setHasNewAlerts] = useState(false);
+    const [showSearch, setShowSearch] = useState(false);
 
     useEffect(() => {
         const handleResize = () => {
@@ -82,7 +84,15 @@ export default function AuthenticatedLayout({ children, followers, friends, auth
                     label="Home"
                     active={window.location.pathname.startsWith("/publications")}
                 />
-                <NavLink href="/search" icon={FiSearch} label="Search" />
+                <NavLink
+                    href="#"
+                    icon={FiSearch}
+                    label="Search"
+                    onClick={e => {
+                        e.preventDefault();
+                        setShowSearch(true);
+                    }}
+                />
                 <div className="relative">
                     <NavLink
                         href="#"
@@ -170,7 +180,15 @@ export default function AuthenticatedLayout({ children, followers, friends, auth
                         label="Home"
                         active={window.location.pathname.startsWith("/publications")}
                     />
-                    <NavLink href="/search" icon={FiSearch} label="Search" />
+                    <NavLink
+                        href="#"
+                        icon={FiSearch}
+                        label="Search"
+                        onClick={e => {
+                            e.preventDefault();
+                            setShowSearch(true);
+                        }}
+                    />
                     <NavLink
                         href="#"
                         icon={FiBell}
@@ -216,6 +234,7 @@ export default function AuthenticatedLayout({ children, followers, friends, auth
                 onClose={() => setShowAlerts(false)}
                 {...alertsData}
             />
+            <ModalSearch open={showSearch} onClose={() => setShowSearch(false)} authUser={authUser} />
         </div>
     );
 }

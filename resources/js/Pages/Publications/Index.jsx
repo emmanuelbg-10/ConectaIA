@@ -49,6 +49,7 @@ export default function TwitterStyleFeed({
         initialPublications.links?.next || initialPublications.next_page_url
     );
     const [loadingMore, setLoadingMore] = useState(false);
+    const [filter, setFilter] = useState("general"); // "general" o "following"
 
     useEffect(() => {
         setPublications(
@@ -292,6 +293,14 @@ export default function TwitterStyleFeed({
         authUser.is_moderator
     );
 
+    const filteredPublications =
+        filter === "general"
+            ? publications
+            : publications.filter(
+                (pub) =>
+                    pub.following || pub.user.id === authUser.id // <-- incluye tus publicaciones
+            );
+
     return (
         <AuthenticatedLayout
             authUser={authUser}
@@ -306,6 +315,31 @@ export default function TwitterStyleFeed({
             }
         >
             <Head title="Publicaciones" />
+
+            {/* Filtros para el feed */}
+            <div className="flex justify-center gap-4 mb-4">
+                <button
+                    className={`px-6 py-3 rounded-lg font-bold text-lg transition ${
+                        filter === "general"
+                            ? "bg-blue-600 text-white shadow"
+                            : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200"
+                    }`}
+                    onClick={() => setFilter("general")}
+                >
+                    General
+                </button>
+                <button
+                    className={`px-6 py-3 rounded-lg font-bold text-lg transition ${
+                        filter === "following"
+                            ? "bg-blue-600 text-white shadow"
+                            : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200"
+                    }`}
+                    onClick={() => setFilter("following")}
+                >
+                    Siguiendo
+                </button>
+            </div>
+
 
             {/* Área para crear nueva publicación (siempre visible) */}
             <div className="border-b border-gray-200 dark:border-gray-700 p-4">
@@ -421,6 +455,7 @@ export default function TwitterStyleFeed({
                 </div>
             )}
 
+            
             {/* Listado de publicaciones o estado vacío */}
             {publications.length === 0 && !loadingMore ? (
                 <div className="py-16 text-center">
@@ -443,7 +478,7 @@ export default function TwitterStyleFeed({
             ) : (
                 <>
                     <div className="divide-y divide-gray-200 dark:divide-gray-700">
-                        {publications.map((publication) => (
+                        {filteredPublications.map((publication) => (
                             <div
                                 key={publication.id}
                                 className="p-4 hover:bg-gray-50 dark:hover:bg-gray-900 transition"

@@ -30,10 +30,10 @@ class MessageSent implements ShouldBroadcast
      */
     public function broadcastOn(): array
     {
-        return [
-            new Channel('chat.' . $this->message->user_receiver_id),
-            new Channel('chat.' . $this->message->user_sender_id),
-        ];
+        $ids = [$this->message->user_sender_id, $this->message->user_receiver_id];
+        sort($ids); // Ordena los IDs para que el canal sea único para ambos
+        $channelName = 'chat.' . implode('.', $ids);
+        return [new Channel($channelName)];
     }
 
     public function broadcastAs()
