@@ -2,12 +2,17 @@ import React, { useState, useEffect, useRef } from "react";
 import FriendButton from "@/Components/FriendButton";
 import FollowButton from "@/Components/FollowButton";
 
-export default function ModalSearch({ open, onClose, authUser }) {
+export default function ModalSearch({ open, onClose, authUser,   onPublicationSelect = () => {} }) {
     const [query, setQuery] = useState("");
     const [type, setType] = useState("users"); // "users" o "publications"
     const [results, setResults] = useState([]);
     const [loading, setLoading] = useState(false);
     const modalRef = useRef(null);
+
+    // Definir handleClose antes de usarla
+    const handleClose = () => {
+        onClose();
+    };
 
     useEffect(() => {
         if (!query) {
@@ -39,11 +44,6 @@ export default function ModalSearch({ open, onClose, authUser }) {
             document.removeEventListener("mousedown", handleClickOutside);
         };
     }, [open]);
-
-    const handleClose = () => {
-        onClose();
-        window.location.reload();
-    };
 
     if (!open) return null;
 
@@ -92,8 +92,16 @@ export default function ModalSearch({ open, onClose, authUser }) {
                         </div>
                     ))}
                     {type === "publications" && results.map(pub => (
-                        <div key={pub.id} className="py-2 border-b">
-                            <div className="font-semibold">{pub.user.name}</div>
+                        <div
+                            key={pub.id}
+                            className="py-2 border-b cursor-pointer hover:bg-blue-50"
+                            onClick={() => {
+                                window.location.href = `/publications/${pub.id}`;
+                            }}
+                        >
+                            <div className="font-semibold">
+                                {pub.user ? pub.user.name : <span className="text-gray-400">Sin usuario</span>}
+                            </div>
                             <div>{pub.textContent}</div>
                         </div>
                     ))}
