@@ -34,7 +34,7 @@ export default function Login({ status, canResetPassword }) {
                 </div>
             )}
 
-            <form onSubmit={submit} className="bg-black opacity-75 px-10 py-5 rounded-lg">
+            <form onSubmit={submit} className="">
                 <div>
                     <InputLabel htmlFor="email" value="Correo electrónico" />
 
