@@ -22,7 +22,15 @@ export default function Profile({ auth }) {
                 </p>
 
                 <button
-                    onClick={() => router.post(route("logout"))}
+                    onClick={() => {
+                        router.post(
+                            route("logout"),
+                            {},
+                            {
+                                onFinish: () => window.location.reload(),
+                            }
+                        );
+                    }}
                     className="mt-6 inline-flex items-center gap-2 px-4 py-2 bg-[#214478] text-white rounded-xl hover:opacity-90 transition-all"
                 >
                     <FiLogOut />
