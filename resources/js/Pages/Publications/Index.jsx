@@ -56,6 +56,8 @@ export default function TwitterStyleFeed({
     const [hashtagSearch, setHashtagSearch] = useState("");
     const [hashtagQuery, setHashtagQuery] = useState([]); // ahora es array
     const [showModal, setShowModal] = useState(false);
+    const [hashtagSuggestions, setHashtagSuggestions] = useState([]);
+    const [highlightedIndex, setHighlightedIndex] = useState(-1);
 
     useEffect(() => {
         setPublications(
@@ -366,7 +368,8 @@ export default function TwitterStyleFeed({
         try {
             const res = await fetch(`publications/${publicationId}/like`, {
                 method: "POST",
-                headers: {
+                headers:
+                 {
                     "X-CSRF-TOKEN": getCsrfToken(),
                     "X-Requested-With": "XMLHttpRequest",
                     Accept: "application/json",
@@ -434,6 +437,28 @@ export default function TwitterStyleFeed({
               )
             : publications;
 
+    const fetchHashtagSuggestions = async (query) => {
+        if (!query) {
+            setHashtagSuggestions([]);
+            return;
+        }
+        try {
+            const res = await fetch(`/hashtags/search?q=${encodeURIComponent(query)}`);
+            const data = await res.json();
+            setHashtagSuggestions(data.hashtags || []);
+        } catch {
+            setHashtagSuggestions([]);
+        }
+    };
+
+    useEffect(() => {
+        if (filter === "hashtag" && hashtagSearch.length > 0) {
+            fetchHashtagSuggestions(hashtagSearch.trim().replace(/^#/, ""));
+        } else {
+            setHashtagSuggestions([]);
+        }
+    }, [hashtagSearch, filter]);
+
     return (
         <AuthenticatedLayout
             authUser={authUser}
@@ -450,66 +475,136 @@ export default function TwitterStyleFeed({
             <Head title="Publicaciones" />
 
             {/* Filtros para el feed */}
-            <div className="flex justify-center gap-4 mb-4">
-                <button
-                    className={`px-6 py-3 rounded-lg font-bold text-lg transition ${
-                        filter === "general"
-                            ? "bg-blue-600 text-white shadow"
-                            : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200"
-                    }`}
-                    onClick={() => setFilter("general")}
-                >
-                    General
-                </button>
-                <button
-                    className={`px-6 py-3 rounded-lg font-bold text-lg transition ${
-                        filter === "following"
-                            ? "bg-blue-600 text-white shadow"
-                            : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200"
-                    }`}
-                    onClick={() => setFilter("following")}
-                >
-                    Siguiendo
-                </button>
-                <button
-                    className={`px-6 py-3 rounded-lg font-bold text-lg transition ${
-                        filter === "hashtag"
-                            ? "bg-blue-600 text-white shadow"
-                            : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200"
-                    }`}
-                    onClick={() => setFilter("hashtag")}
-                >
-                    Buscar hashtag
-                </button>
-                {filter === "hashtag" && (
-                    <form
-                        onSubmit={e => {
-                            e.preventDefault();
-                            const tag = hashtagSearch.trim().replace(/^#/, "");
-                            if (tag && !hashtagQuery.includes(tag.toLowerCase())) {
-                                setHashtagQuery([...hashtagQuery, tag.toLowerCase()]);
+            <div className="flex flex-col sm:flex-row justify-center gap-2 sm:gap-4 mb-4 w-full">
+    <div className="flex flex-row justify-center gap-2 sm:gap-4 w-full sm:w-auto">
+        <button
+            className={`px-6 py-3 rounded-lg font-bold text-lg transition ${
+                filter === "general"
+                    ? "bg-blue-600 text-white shadow"
+                    : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200"
+            }`}
+            onClick={() => setFilter("general")}
+            style={{ minWidth: 0, minHeight: 48 }}
+        >
+            General
+        </button>
+        <button
+            className={`px-6 py-3 rounded-lg font-bold text-lg transition ${
+                filter === "following"
+                    ? "bg-blue-600 text-white shadow"
+                    : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200"
+            }`}
+            onClick={() => setFilter("following")}
+            style={{ minWidth: 0, minHeight: 48 }}
+        >
+            Siguiendo
+        </button>
+        <button
+            className={`px-6 py-3 rounded-lg font-bold text-lg transition ${
+                filter === "hashtag"
+                    ? "bg-blue-600 text-white shadow"
+                    : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200"
+            }`}
+            onClick={() => setFilter("hashtag")}
+            style={{ minWidth: 0, minHeight: 48 }}
+        >
+            Buscar hashtag
+        </button>
+    </div>
+    {filter === "hashtag" && (
+        <div className="w-full sm:w-auto flex justify-center">
+            <form
+                onSubmit={e => {
+                    e.preventDefault();
+                    let tag = hashtagSearch.trim().replace(/^#/, "");
+                    // Si hay sugerencias y una está seleccionada con flechas, usar esa
+                    if (highlightedIndex >= 0 && hashtagSuggestions[highlightedIndex]) {
+                        tag = hashtagSuggestions[highlightedIndex];
+                    }
+                    if (tag && !hashtagQuery.includes(tag.toLowerCase())) {
+                        setHashtagQuery([...hashtagQuery, tag.toLowerCase()]);
+                    }
+                    setHashtagSearch("");
+                    setHashtagSuggestions([]);
+                    setHighlightedIndex(-1);
+                }}
+                className="flex flex-row items-stretch gap-2 w-full sm:w-auto relative"
+                style={{ minHeight: 48 }}
+            >
+                <input
+                    type="text"
+                    value={hashtagSearch}
+                    onChange={e => {
+                        setHashtagSearch(e.target.value);
+                        setHighlightedIndex(-1);
+                    }}
+                    placeholder="Ej: futbol"
+                    className="px-6 py-3 rounded-lg border border-gray-300 dark:bg-gray-700 dark:text-white font-bold text-lg w-full sm:w-auto"
+                    style={{ minWidth: 0, minHeight: 48 }}
+                    autoComplete="off"
+                    onKeyDown={e => {
+                        if (hashtagSuggestions.length > 0) {
+                            if (e.key === "ArrowDown") {
+                                e.preventDefault();
+                                setHighlightedIndex(i =>
+                                    i < hashtagSuggestions.length - 1 ? i + 1 : 0
+                                );
+                            } else if (e.key === "ArrowUp") {
+                                e.preventDefault();
+                                setHighlightedIndex(i =>
+                                    i > 0 ? i - 1 : hashtagSuggestions.length - 1
+                                );
+                            } else if (e.key === "Enter" && highlightedIndex >= 0) {
+                                e.preventDefault();
+                                const tag = hashtagSuggestions[highlightedIndex];
+                                if (tag && !hashtagQuery.includes(tag.toLowerCase())) {
+                                    setHashtagQuery([...hashtagQuery, tag.toLowerCase()]);
+                                }
+                                setHashtagSearch("");
+                                setHashtagSuggestions([]);
+                                setHighlightedIndex(-1);
                             }
-                            setHashtagSearch("");
-                        }}
-                        className="flex items-center gap-2"
-                    >
-                        <input
-                            type="text"
-                            value={hashtagSearch}
-                            onChange={e => setHashtagSearch(e.target.value)}
-                            placeholder="Ej: futbol"
-                            className="px-3 py-2 rounded border border-gray-300 dark:bg-gray-700 dark:text-white"
-                            style={{ minWidth: 120 }}
-                        />
-                        <button
-                            type="submit"
-                            className="px-3 py-2 rounded bg-blue-500 text-white font-bold"
-                        >
-                            Añadir hashtag
-                        </button>
-                    </form>
+                        }
+                    }}
+                />
+                {hashtagSuggestions.length > 0 && (
+                    <div className="absolute left-0 top-full mt-1 w-full sm:w-60 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded shadow z-50">
+                        {hashtagSuggestions.map((tag, idx) => (
+                            <button
+                                key={tag}
+                                type="button"
+                                className={`block w-full text-left px-3 py-2 hover:bg-blue-100 dark:hover:bg-blue-900 ${
+                                    highlightedIndex === idx
+                                        ? "bg-blue-100 dark:bg-blue-900"
+                                        : ""
+                                }`}
+                                onMouseEnter={() => setHighlightedIndex(idx)}
+                                onMouseLeave={() => setHighlightedIndex(-1)}
+                                onClick={() => {
+                                    if (!hashtagQuery.includes(tag.toLowerCase())) {
+                                        setHashtagQuery([...hashtagQuery, tag.toLowerCase()]);
+                                    }
+                                    setHashtagSearch("");
+                                    setHashtagSuggestions([]);
+                                    setHighlightedIndex(-1);
+                                }}
+                            >
+                                #{tag}
+                            </button>
+                        ))}
+                    </div>
                 )}
-            </div>
+                <button
+                    type="submit"
+                    className="px-6 py-3 rounded-lg bg-blue-500 text-white font-bold text-lg w-auto"
+                    style={{ minHeight: 48 }}
+                >
+                    Añadir hashtag
+                </button>
+            </form>
+        </div>
+    )}
+</div>
 
             {/* Área para crear nueva publicación */}
             <div className="border-b border-gray-200 dark:border-gray-700 p-4">
