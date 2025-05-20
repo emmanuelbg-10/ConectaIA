@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use App\Http\Controllers\FriendshipController;
 use App\Http\Controllers\FollowController;
-use App\Http\Controllers\MessageController; // Asegúrate de importar tu controlador de mensajes
+use App\Http\Controllers\MessageController;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Http\Request;
 
@@ -48,11 +48,15 @@ Route::get('/profile', function () {
     ]);
 })->middleware(['auth', 'verified'])->name('profile');
 
-// Ajustes de perfil
+// Ajustes de perfil y Avatar
 Route::middleware('auth')->group(function () {
     Route::get('/settings', [ProfileController::class, 'edit'])->name('settings.edit');
     Route::patch('/settings', [ProfileController::class, 'update'])->name('settings.update');
     Route::delete('/settings', [ProfileController::class, 'destroy'])->name('settings.destroy');
+
+    // Rutas para la gestión del avatar
+    Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('profile.updateAvatar');
+    Route::delete('/profile/avatar', [ProfileController::class, 'deleteAvatar'])->name('profile.deleteAvatar'); // NUEVA RUTA
 });
 
 // Autenticación
@@ -93,13 +97,6 @@ Route::post('/moderate-text', [ModerationController::class, 'moderate'])
 
 // Página de test de moderación
 Route::view('/moderate-test', 'moderate-test');
-
-Route::post('/publications/{publication}/like', [LikeController::class, 'toggle'])->middleware('auth');
-Route::get('/publications/{publication}', [PublicationController::class, 'show'])->name('publications.show');
-
-Route::post('/publications/{publication}/responses', [ResponseController::class, 'store'])->name('responses.store')->middleware('auth');
-Route::put('/responses/{response}', [ResponseController::class, 'update'])->name('responses.update')->middleware('auth');
-Route::delete('/responses/{response}', [ResponseController::class, 'destroy'])->name('responses.destroy')->middleware('auth');
 
 Route::middleware('auth')->group(function () {
     Route::post('/friendships/send/{receiver_id}', [FriendshipController::class, 'sendRequest']);
