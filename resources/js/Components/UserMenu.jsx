@@ -25,7 +25,8 @@ export default function UserMenu({
             }
         }
         document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
+        return () =>
+            document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
     const handleDelete = async () => {
@@ -42,19 +43,33 @@ export default function UserMenu({
                 const res = await fetch(`/publications/${publicationId}`, {
                     method: "DELETE",
                     headers: {
-                        "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').getAttribute("content"),
+                        "X-CSRF-TOKEN": document
+                            .querySelector('meta[name="csrf-token"]')
+                            .getAttribute("content"),
                         "X-Requested-With": "XMLHttpRequest",
-                        "Accept": "application/json",
+                        Accept: "application/json",
                     },
                 });
                 if (res.ok) {
-                    Swal.fire("Eliminada", "La publicación fue eliminada.", "success");
+                    Swal.fire(
+                        "Eliminada",
+                        "La publicación fue eliminada.",
+                        "success"
+                    );
                     if (onDeletePublication) onDeletePublication(publicationId);
                 } else {
-                    Swal.fire("Error", "No se pudo eliminar la publicación.", "error");
+                    Swal.fire(
+                        "Error",
+                        "No se pudo eliminar la publicación.",
+                        "error"
+                    );
                 }
             } catch {
-                Swal.fire("Error", "No se pudo eliminar la publicación.", "error");
+                Swal.fire(
+                    "Error",
+                    "No se pudo eliminar la publicación.",
+                    "error"
+                );
             }
         }
     };
@@ -66,7 +81,11 @@ export default function UserMenu({
                 className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
                 onClick={() => setOpen((v) => !v)}
             >
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <svg
+                    className="w-5 h-5 dark:text-white"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                >
                     <circle cx="4" cy="10" r="2" />
                     <circle cx="10" cy="10" r="2" />
                     <circle cx="16" cy="10" r="2" />
@@ -80,17 +99,24 @@ export default function UserMenu({
                             <FriendButton
                                 userId={userId}
                                 initialStatus={friendStatus}
-                                onFriendStatusChange={status => {
+                                onFriendStatusChange={(status) => {
                                     // Llama al handler del padre si existe
-                                    if (typeof onFriendStatusChange === "function") {
+                                    if (
+                                        typeof onFriendStatusChange ===
+                                        "function"
+                                    ) {
                                         onFriendStatusChange(status);
                                     }
                                     // Si quieres, también puedes cerrar el menú aquí si lo deseas
                                 }}
                                 onFriendRemoved={onFriendRemoved}
                             />
-                            <div className="mt-2"> 
-                                <FollowButton userId={userId} initialFollowing={following} onToggleFollow={onToggleFollow} />
+                            <div className="mt-2">
+                                <FollowButton
+                                    userId={userId}
+                                    initialFollowing={following}
+                                    onToggleFollow={onToggleFollow}
+                                />
                             </div>
                         </>
                     )}

@@ -8,6 +8,8 @@ const ChatSidebar = ({ friends = [], onChatSelect }) => {
 
     return (
         <div className="w-full md:w-96 h-screen bg-white dark:bg-black border-l border-gray-200 dark:border-gray-800 z-40 overflow-y-auto ">
+            {console.log(friends)}
+
             {/* Header */}
             <div className="p-8 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-black">
                 <h2 className="text-xl font-bold text-[#214478] title">
@@ -24,15 +26,20 @@ const ChatSidebar = ({ friends = [], onChatSelect }) => {
                             className="p-4 cursor-pointer transition-all hover:bg-gray-100 dark:hover:bg-gray-900"
                             onClick={() => handleChatClick(friend)}
                         >
+                            {console.log(friend)}
                             <div className="flex items-center gap-3">
-                                <img
-                                    src={
-                                        friend.profile_photo_url ||
-                                        "/default-user.png"
-                                    }
-                                    alt={friend.name}
-                                    className="h-10 w-10 rounded-full object-cover"
-                                />
+                                {friend.avatarURL ? ( // Cambiado de profile_photo_url a avatarURL
+                                    <img
+                                        src={friend.avatarURL} // Cambiado de profile_photo_url a avatarURL
+                                        alt={friend.name}
+                                        className="h-12 w-12 rounded-full object-cover"
+                                    />
+                                ) : (
+                                    <div className="h-12 w-12 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-lg font-semibold text-gray-700 dark:text-gray-300">
+                                        {friend.name.charAt(0).toUpperCase()}
+                                    </div>
+                                )}
+
                                 <div className="flex-1 min-w-0">
                                     <p className="text-sm font-medium truncate text-gray-900 dark:text-gray-100">
                                         {friend.name}

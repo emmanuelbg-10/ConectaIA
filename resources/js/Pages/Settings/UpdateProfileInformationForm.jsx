@@ -1,3 +1,4 @@
+import AvatarUploader from "@/Components/AvatarUploader";
 import InputError from "@/Components/InputError";
 import InputLabel from "@/Components/InputLabel";
 import PrimaryButton from "@/Components/PrimaryButton";
@@ -37,6 +38,8 @@ export default function UpdateProfileInformation({
                     tu cuenta.
                 </p>
             </header>
+
+            <AvatarUploader user={user} />
 
             <form onSubmit={submit} className="mt-6 space-y-6">
                 <div>

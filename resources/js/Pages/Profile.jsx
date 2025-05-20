@@ -1,29 +1,19 @@
+import React from "react";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import { Head, router } from "@inertiajs/react";
 import { FiLogOut } from "react-icons/fi";
+import AvatarUploader from "@/Components/AvatarUploader";
 
 export default function Profile({ auth }) {
     const user = auth.user;
-
-    const hasAvatar = user.avatarURL && user.avatarURL.trim() !== "";
 
     return (
         <AuthenticatedLayout>
             <Head title="Perfil" />
 
-            <div className="max-w-xl mx-auto mt-10 bg-white dark:bg-black border dark:border-gray-800 rounded-2xl shadow-md p-8 text-center">
-                {hasAvatar ? (
-                    <img
-                        src={user.avatarURL}
-                        alt="Avatar"
-                        className="w-32 h-32 rounded-full mx-auto border-4 border-[#214478] object-cover"
-                    />
-                ) : (
-                    <div className="w-32 h-32 rounded-full mx-auto bg-gray-300 dark:bg-gray-600 flex items-center justify-center border-4 border-[#214478] text-5xl font-bold text-gray-700 dark:text-gray-300">
-                        {user.name?.charAt(0).toUpperCase()}
-                    </div>
-                )}
+            <AvatarUploader user={user} />
 
+            <div className="relative max-w-xl mx-auto mt-10 bg-white dark:bg-black border dark:border-gray-800 rounded-2xl shadow-md p-8 text-center">
                 <h2 className="mt-4 text-2xl font-bold text-black dark:text-white">
                     {user.name}
                 </h2>

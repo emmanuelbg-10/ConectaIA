@@ -8,9 +8,10 @@ use App\Models\Mention;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Cloudinary\Api\Exception\ApiError;
+use Cloudinary\Api\Upload\UploadApi;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 use Cloudinary\Api\Exception\ApiException;
@@ -83,36 +84,36 @@ class PublicationController extends Controller
 
         $user = auth()->user();
 
-        // Amigos donde el usuario es sender o receiver y la amistad está aceptada
-        $friends = \App\Models\User::whereIn('id', function ($query) use ($user) {
-            $query->select('receiver_id')
-                ->from('friendships')
-                ->where('sender_id', $user->id)
-                ->where('status', 'accepted');
-        })
-            ->orWhereIn('id', function ($query) use ($user) {
-                $query->select('sender_id')
-                    ->from('friendships')
-                    ->where('receiver_id', $user->id)
-                    ->where('status', 'accepted');
-            })
-            ->get(['id', 'name', 'profile_photo_url']);
+    // Amigos donde el usuario es sender o receiver y la amistad está aceptada
+    $friends = \App\Models\User::whereIn('id', function($query) use ($user) {
+        $query->select('receiver_id')
+            ->from('friendships')
+            ->where('sender_id', $user->id)
+            ->where('status', 'accepted');
+    })
+    ->orWhereIn('id', function($query) use ($user) {
+        $query->select('sender_id')
+            ->from('friendships')
+            ->where('receiver_id', $user->id)
+            ->where('status', 'accepted');
+    })
+    ->get(['id', 'name', 'avatarURL' ]);
 
         Log::info('Amigos encontrados:', $friends->toArray());
 
-        return Inertia::render('Publications/Index', [
-            'authUser' => [
-                'id' => auth()->id(),
-                'name' => auth()->user()->name,
-                'profile_photo_url' => auth()->user()->profile_photo_url,
-                'is_admin' => auth()->user()->hasRole('administrador'),
-                'is_moderator' => auth()->user()->hasRole('moderador'),
-                // ...otros campos que necesites
-            ],
-            'publications' => $publications,
-            'friends' => $friends,
-        ]);
-    }
+    return Inertia::render('Publications/Index', [
+        'authUser' => [
+            'id' => auth()->id(),
+            'name' => auth()->user()->name,
+            'avatarURL' => auth()->user()->avatarURL,
+            'is_admin' => auth()->user()->hasRole('administrador'),
+            'is_moderator' => auth()->user()->hasRole('moderador'),
+            // ...otros campos que necesites
+        ],
+        'publications' => $publications,
+        'friends' => $friends,
+    ]);
+}
 
     /**
      * Show a specific publication.
@@ -189,7 +190,7 @@ class PublicationController extends Controller
     {
         $validated = $request->validate([
             'textContent' => 'required|string|max:500',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif',
         ]);
 
         $imageURL = null;
@@ -322,10 +323,36 @@ class PublicationController extends Controller
      * @return \Illuminate\Http\RedirectResposne
      * Redirects back to the 'publications.index' view with a success message.
      */
-    public function destroy(Publication $publication): RedirectResponse
-    {
-        $publication->delete();
 
-        return redirect()->route('publications.index')->with('success', 'Publicación eliminada con éxito.');
-    }
+     public function destroy(Publication $publication, Request $request)
+     {
+         if (
+             $request->user()->id !== $publication->user_id &&
+             !$request->user()->hasAnyRole(['administrador', 'moderador'])
+         ) {
+             return response()->json(['message' => 'No autorizado.'], 403);
+         }
+     
+         if ($publication->imageURL) {
+             try {
+                 // Extraer ruta y obtener public_id
+                 $path = parse_url($publication->imageURL, PHP_URL_PATH);
+                 $segments = explode('/', $path);
+                 $filenameWithExtension = end($segments);
+                 $publicId = pathinfo($filenameWithExtension, PATHINFO_FILENAME);
+     
+                 (new UploadApi())->destroy($publicId);
+             } catch (ApiError $e) {
+                 Log::error("Error al eliminar imagen de Cloudinary: " . $e->getMessage());
+             }
+         }
+     
+         $publication->delete();
+     
+         if ($request->ajax()) {
+             return response()->json(['message' => 'Publicación eliminada con éxito.']);
+         }
+     
+         return redirect()->route('publications.index')->with('success', 'Publicación eliminada con éxito.');
+     }
 }
