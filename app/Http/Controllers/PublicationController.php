@@ -75,7 +75,7 @@ class PublicationController extends Controller
             ->where('receiver_id', $user->id)
             ->where('status', 'accepted');
     })
-    ->get(['id', 'name', 'profile_photo_url']);
+    ->get(['id', 'name', 'avatarURL' ]);
 
     Log::info('Amigos encontrados:', $friends->toArray());
 
@@ -83,7 +83,7 @@ class PublicationController extends Controller
         'authUser' => [
             'id' => auth()->id(),
             'name' => auth()->user()->name,
-            'profile_photo_url' => auth()->user()->profile_photo_url,
+            'avatarURL' => auth()->user()->avatarURL,
             'is_admin' => auth()->user()->hasRole('administrador'),
             'is_moderator' => auth()->user()->hasRole('moderador'),
             // ...otros campos que necesites
