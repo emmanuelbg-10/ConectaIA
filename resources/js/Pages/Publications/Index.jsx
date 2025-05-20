@@ -27,7 +27,6 @@ function normalizePublication(pub) {
 export default function TwitterStyleFeed({
     authUser,
     publications: initialPublications,
-    friends,
     followers,
 }) {
     const { props: pageProps } = usePage();
@@ -295,7 +294,6 @@ export default function TwitterStyleFeed({
     return (
         <AuthenticatedLayout
             authUser={authUser}
-            friends={friends}
             followers={followers}
             header={
                 <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 z-10">

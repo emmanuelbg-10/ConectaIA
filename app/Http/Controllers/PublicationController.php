@@ -86,10 +86,8 @@ class PublicationController extends Controller
             'avatarURL' => auth()->user()->avatarURL,
             'is_admin' => auth()->user()->hasRole('administrador'),
             'is_moderator' => auth()->user()->hasRole('moderador'),
-            // ...otros campos que necesites
         ],
         'publications' => $publications,
-        'friends' => $friends,
     ]);
 }
 

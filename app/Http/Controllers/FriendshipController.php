@@ -83,7 +83,6 @@ class FriendshipController extends Controller
     // Eliminar amistad
     public function removeFriend($userId)
     {
-        $user = auth()->user();
         $friendship = Friendship::where(function($query) use ($userId) {
                 $query->where('sender_id', Auth::id())
                       ->where('receiver_id', $userId);
