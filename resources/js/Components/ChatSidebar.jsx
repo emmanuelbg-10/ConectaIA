@@ -22,7 +22,10 @@ const ChatSidebar = ({ onChatSelect }) => {
             </div>
 
             {/* Lista de chats */}
-            <ActiveChats friends={friends} onChatSelect={handleChatClick}></ActiveChats>
+            <ActiveChats
+                friends={friends}
+                onChatSelect={handleChatClick}
+            ></ActiveChats>
         </div>
     );
 };

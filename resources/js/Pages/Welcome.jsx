@@ -9,7 +9,6 @@ export default function Welcome() {
     const [checkingAuth, setCheckingAuth] = useState(true);
 
     useEffect(() => {
-        // Evita redireccionar hasta que esté montado todo
         const timeout = setTimeout(() => {
             if (auth?.user) {
                 router.visit("/publications");

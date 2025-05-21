@@ -59,7 +59,6 @@ const ChatWindow = ({
 
         if (res.ok) {
             setNewMessage("");
-            // No agregues el mensaje aquí, lo recibirás por el evento
         }
     };
 
@@ -72,13 +71,10 @@ const ChatWindow = ({
         console.log("Suscribiendo a:", channelName);
         console.log("currentUserId en ChatWindow:", currentUserId);
 
-        window.Echo.channel(channelName).listen(
-            ".MessageSent",
-            (e) => {
-                console.log("Evento recibido:", e);
-                setMessages((prev) => [...prev, e.message]);
-            }
-        );
+        window.Echo.channel(channelName).listen(".MessageSent", (e) => {
+            console.log("Evento recibido:", e);
+            setMessages((prev) => [...prev, e.message]);
+        });
 
         return () => {
             window.Echo.leave(channelName);

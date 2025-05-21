@@ -1,14 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
-import { FaSearch, FaUser, FaClipboard, FaTimes } from "react-icons/fa";
+import { FaSearch, FaClipboard, FaTimes } from "react-icons/fa";
 import FriendButton from "@/Components/FriendButton";
 import FollowButton from "@/Components/FollowButton";
 
-export default function ModalSearch({
-    open,
-    onClose,
-    authUser,
-    onPublicationSelect = () => {},
-}) {
+export default function ModalSearch({ open, onClose }) {
     const [query, setQuery] = useState("");
     const [type, setType] = useState("users"); // "users" o "publications"
     const [results, setResults] = useState([]);
