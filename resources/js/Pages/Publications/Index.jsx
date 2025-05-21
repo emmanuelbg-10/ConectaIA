@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
-import { Head, useForm, usePage } from "@inertiajs/react";
+import { Head, useForm } from "@inertiajs/react";
 import { Inertia } from "@inertiajs/inertia";
 import Swal from "sweetalert2";
 import {
@@ -9,7 +9,7 @@ import {
     XIcon,
 } from "@heroicons/react/outline";
 import UserMenu from "@/Components/UserMenu";
-import ModalSearch from "@/Components/ModalSearch";
+import { FaHashtag, FaTimes } from "react-icons/fa";
 
 function getCsrfToken() {
     const csrf = document.querySelector('meta[name="csrf-token"]');
@@ -31,8 +31,7 @@ export default function TwitterStyleFeed({
     publications: initialPublications,
     followers,
 }) {
-    const { props: pageProps } = usePage();
-    const { data, setData, post, processing, errors, reset } = useForm(
+    const { data, setData, processing, reset } = useForm(
         {
             textContent: "",
             image: null,
@@ -53,8 +52,7 @@ export default function TwitterStyleFeed({
     const [loadingMore, setLoadingMore] = useState(false);
     const [filter, setFilter] = useState("general");
     const [hashtagSearch, setHashtagSearch] = useState("");
-    const [hashtagQuery, setHashtagQuery] = useState([]); // ahora es array
-    const [showModal, setShowModal] = useState(false);
+    const [hashtagQuery, setHashtagQuery] = useState([]);
     const [hashtagSuggestions, setHashtagSuggestions] = useState([]);
     const [highlightedIndex, setHighlightedIndex] = useState(-1);
 
@@ -94,6 +92,7 @@ export default function TwitterStyleFeed({
             setLoadingMore(false);
         }
     };
+
     useEffect(() => {
         const handleScroll = () => {
             const { scrollTop, scrollHeight, clientHeight } =
@@ -129,7 +128,6 @@ export default function TwitterStyleFeed({
         });
 
         try {
-            console.log("Enviando a moderación...");
             const geminiRes = await fetch("moderate-text", {
                 method: "POST",
                 headers: {
@@ -144,7 +142,6 @@ export default function TwitterStyleFeed({
             try {
                 geminiData = await geminiRes.json();
             } catch (jsonErr) {
-                console.log("Error al parsear respuesta de moderación:", jsonErr);
                 Swal.fire(
                     "Error",
                     "Respuesta inesperada del servidor de moderación.",
@@ -153,8 +150,6 @@ export default function TwitterStyleFeed({
                 setShowForm(false);
                 return;
             }
-
-            console.log("Respuesta de moderación:", geminiData);
 
             if (!geminiRes.ok) {
                 Swal.fire(
@@ -177,7 +172,6 @@ export default function TwitterStyleFeed({
                 return;
             }
         } catch (err) {
-            console.log("Error en la moderación:", err);
             Swal.fire(
                 "Error",
                 "No se pudo validar el contenido. Intenta de nuevo.",
@@ -187,8 +181,6 @@ export default function TwitterStyleFeed({
             return;
         }
 
-        // Obtener hashtags sugeridos
-        console.log("Llamando a sugerencia de hashtags...");
         const hashtagsRes = await fetch("/hashtags/suggest", {
             method: "POST",
             headers: {
@@ -198,7 +190,7 @@ export default function TwitterStyleFeed({
             },
             body: JSON.stringify({ text: data.textContent }),
         });
-        
+
         const hashtagsData = await hashtagsRes.json();
         const suggestedHashtags = hashtagsData.hashtags || [];
         let hashtagsToSend = [];
@@ -245,24 +237,33 @@ export default function TwitterStyleFeed({
                                     </span>`
                             )
                             .join("");
-                        // Botón para eliminar
-                        list.querySelectorAll("button[data-idx]").forEach((btn) => {
-                            btn.onclick = () => {
-                                manualHashtags.splice(Number(btn.dataset.idx), 1);
-                                renderManualList();
-                            };
-                        });
+                        list.querySelectorAll("button[data-idx]").forEach(
+                            (btn) => {
+                                btn.onclick = () => {
+                                    manualHashtags.splice(
+                                        Number(btn.dataset.idx),
+                                        1
+                                    );
+                                    renderManualList();
+                                };
+                            }
+                        );
                     };
 
                     btn.onclick = () => {
                         let val = input.value.trim().replace(/^#/, "");
                         if (!val) return;
                         if (
-                            manualHashtags.length + suggestedHashtags.filter((_, i) =>
-                                document.getElementById(`hashtag_${i}`).checked
-                            ).length >= 5
+                            manualHashtags.length +
+                                suggestedHashtags.filter(
+                                    (_, i) =>
+                                        document.getElementById(`hashtag_${i}`)
+                                            .checked
+                                ).length >=
+                            5
                         ) {
-                            errorDiv.textContent = "Máximo 5 hashtags en total.";
+                            errorDiv.textContent =
+                                "Máximo 5 hashtags en total.";
                             return;
                         }
                         if (
@@ -270,7 +271,8 @@ export default function TwitterStyleFeed({
                             suggestedHashtags.some(
                                 (tag, i) =>
                                     tag === val &&
-                                    document.getElementById(`hashtag_${i}`).checked
+                                    document.getElementById(`hashtag_${i}`)
+                                        .checked
                             )
                         ) {
                             errorDiv.textContent = "Hashtag repetido.";
@@ -283,12 +285,15 @@ export default function TwitterStyleFeed({
                     };
                 },
                 preConfirm: () => {
-                    const selected = suggestedHashtags.filter((_, i) =>
-                        document.getElementById(`hashtag_${i}`).checked
+                    const selected = suggestedHashtags.filter(
+                        (_, i) =>
+                            document.getElementById(`hashtag_${i}`).checked
                     );
                     const total = selected.length + manualHashtags.length;
                     if (total > 5) {
-                        Swal.showValidationMessage("Máximo 5 hashtags en total.");
+                        Swal.showValidationMessage(
+                            "Máximo 5 hashtags en total."
+                        );
                         return false;
                     }
                     return [...selected, ...manualHashtags];
@@ -298,13 +303,13 @@ export default function TwitterStyleFeed({
                 cancelButtonText: "Sin hashtags",
             });
 
-            hashtagsToSend = swalResult.isConfirmed ? (swalResult.value || []) : [];
-            console.log("Hashtags seleccionados para enviar:", hashtagsToSend);
+            hashtagsToSend = swalResult.isConfirmed
+                ? swalResult.value || []
+                : [];
         }
 
         Swal.close();
 
-        // Creación optimista
         const optimisticPublication = {
             id: `temp-${Date.now()}`,
             textContent: data.textContent,
@@ -320,21 +325,14 @@ export default function TwitterStyleFeed({
         ]);
         setShowForm(false);
 
-      
-
-        console.log("Enviando publicación al backend...");
-        console.log("Payload a enviar:", {
-            textContent: data.textContent,
-            image: data.image ? "[FILE]" : null,
-            hashtags: hashtagsToSend,
-        });
-
-     
-            Inertia.post(route("publications.store"), {
+        Inertia.post(
+            route("publications.store"),
+            {
                 textContent: data.textContent,
                 image: data.image,
                 hashtags: hashtagsToSend,
-            }, {
+            },
+            {
                 preserveScroll: true,
                 preserveState: true,
                 onSuccess: () => {
@@ -357,8 +355,8 @@ export default function TwitterStyleFeed({
                         "error"
                     );
                 },
-            });
-      
+            }
+        );
 
         return false;
     };
@@ -367,8 +365,7 @@ export default function TwitterStyleFeed({
         try {
             const res = await fetch(`publications/${publicationId}/like`, {
                 method: "POST",
-                headers:
-                 {
+                headers: {
                     "X-CSRF-TOKEN": getCsrfToken(),
                     "X-Requested-With": "XMLHttpRequest",
                     Accept: "application/json",
@@ -407,34 +404,33 @@ export default function TwitterStyleFeed({
 
     const handleHashtagClick = (tag) => {
         setFilter("hashtag");
-        const tagText = (tag.hashtag_text || tag).toLowerCase().replace(/^#/, "");
+        const tagText = (tag.hashtag_text || tag)
+            .toLowerCase()
+            .replace(/^#/, "");
         setHashtagQuery((prev) =>
             prev.includes(tagText) ? prev : [...prev, tagText]
         );
     };
 
-    // Filtrado de publicaciones
-    const filteredPublications =
-        filter === "general"
-            ? publications
-            : filter === "following"
-            ? publications.filter(
-                  (pub) => pub.following || pub.user.id === authUser.id
-              )
-            : filter === "hashtag" && hashtagQuery.length > 0
-            ? publications.filter(
-                  (pub) =>
-                      pub.hashtags &&
-                      hashtagQuery.every((q) =>
-                          pub.hashtags.some(
-                              (tag) =>
-                                  (tag.hashtag_text || tag)
-                                      .toLowerCase()
-                                      .replace(/^#/, "") === q
-                          )
-                      )
-              )
-            : publications;
+    const filteredPublications = publications.filter((pub) => {
+        // Filtro por tipo (General/Siguiendo)
+        if (
+            filter === "following" &&
+            !(pub.following || pub.user.id === authUser.id)
+        ) {
+            return false;
+        }
+
+        // Filtro por hashtag
+        if (hashtagSearch) {
+            const searchTerm = hashtagSearch.toLowerCase().replace(/^#/, "");
+            return pub.hashtags?.some((tag) =>
+                (tag.hashtag_text || tag).toLowerCase().includes(searchTerm)
+            );
+        }
+
+        return true;
+    });
 
     const fetchHashtagSuggestions = async (query) => {
         if (!query) {
@@ -442,7 +438,9 @@ export default function TwitterStyleFeed({
             return;
         }
         try {
-            const res = await fetch(`/hashtags/search?q=${encodeURIComponent(query)}`);
+            const res = await fetch(
+                `/hashtags/search?q=${encodeURIComponent(query)}`
+            );
             const data = await res.json();
             setHashtagSuggestions(data.hashtags || []);
         } catch {
@@ -471,154 +469,140 @@ export default function TwitterStyleFeed({
             }
         >
             <Head title="Publicaciones" />
-
-            {/* Filtros para el feed */}
-            <div className="flex flex-col sm:flex-row justify-center gap-2 sm:gap-4 mb-4 w-full">
-    <div className="flex flex-row justify-center gap-2 sm:gap-4 w-full sm:w-auto">
-        <button
-            className={`px-6 py-3 rounded-lg font-bold text-lg transition ${
-                filter === "general"
-                    ? "bg-blue-600 text-white shadow"
-                    : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200"
-            }`}
-            onClick={() => setFilter("general")}
-            style={{ minWidth: 0, minHeight: 48 }}
-        >
-            General
-        </button>
-        <button
-            className={`px-6 py-3 rounded-lg font-bold text-lg transition ${
-                filter === "following"
-                    ? "bg-blue-600 text-white shadow"
-                    : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200"
-            }`}
-            onClick={() => setFilter("following")}
-            style={{ minWidth: 0, minHeight: 48 }}
-        >
-            Siguiendo
-        </button>
-        <button
-            className={`px-6 py-3 rounded-lg font-bold text-lg transition ${
-                filter === "hashtag"
-                    ? "bg-blue-600 text-white shadow"
-                    : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200"
-            }`}
-            onClick={() => setFilter("hashtag")}
-            style={{ minWidth: 0, minHeight: 48 }}
-        >
-            Buscar hashtag
-        </button>
-    </div>
-    {filter === "hashtag" && (
-        <div className="w-full sm:w-auto flex justify-center">
-            <form
-                onSubmit={e => {
-                    e.preventDefault();
-                    let tag = hashtagSearch.trim().replace(/^#/, "");
-                    // Si hay sugerencias y una está seleccionada con flechas, usar esa
-                    if (highlightedIndex >= 0 && hashtagSuggestions[highlightedIndex]) {
-                        tag = hashtagSuggestions[highlightedIndex];
-                    }
-                    if (tag && !hashtagQuery.includes(tag.toLowerCase())) {
-                        setHashtagQuery([...hashtagQuery, tag.toLowerCase()]);
-                    }
-                    setHashtagSearch("");
-                    setHashtagSuggestions([]);
-                    setHighlightedIndex(-1);
-                }}
-                className="flex flex-row items-stretch gap-2 w-full sm:w-auto relative"
-                style={{ minHeight: 48 }}
-            >
-                <input
-                    type="text"
-                    value={hashtagSearch}
-                    onChange={e => {
-                        setHashtagSearch(e.target.value);
-                        setHighlightedIndex(-1);
-                    }}
-                    placeholder="Ej: futbol"
-                    className="px-6 py-3 rounded-lg border border-gray-300 dark:bg-gray-700 dark:text-white font-bold text-lg w-full sm:w-auto"
-                    style={{ minWidth: 0, minHeight: 48 }}
-                    autoComplete="off"
-                    onKeyDown={e => {
-                        if (hashtagSuggestions.length > 0) {
-                            if (e.key === "ArrowDown") {
-                                e.preventDefault();
-                                setHighlightedIndex(i =>
-                                    i < hashtagSuggestions.length - 1 ? i + 1 : 0
-                                );
-                            } else if (e.key === "ArrowUp") {
-                                e.preventDefault();
-                                setHighlightedIndex(i =>
-                                    i > 0 ? i - 1 : hashtagSuggestions.length - 1
-                                );
-                            } else if (e.key === "Enter" && highlightedIndex >= 0) {
-                                e.preventDefault();
-                                const tag = hashtagSuggestions[highlightedIndex];
-                                if (tag && !hashtagQuery.includes(tag.toLowerCase())) {
-                                    setHashtagQuery([...hashtagQuery, tag.toLowerCase()]);
-                                }
-                                setHashtagSearch("");
-                                setHashtagSuggestions([]);
-                                setHighlightedIndex(-1);
-                            }
-                        }
-                    }}
-                />
-                {hashtagSuggestions.length > 0 && (
-                    <div className="absolute left-0 top-full mt-1 w-full sm:w-60 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded shadow z-50">
-                        {hashtagSuggestions.map((tag, idx) => (
-                            <button
-                                key={tag}
-                                type="button"
-                                className={`block w-full text-left px-3 py-2 hover:bg-blue-100 dark:hover:bg-blue-900 ${
-                                    highlightedIndex === idx
-                                        ? "bg-blue-100 dark:bg-blue-900"
-                                        : ""
-                                }`}
-                                onMouseEnter={() => setHighlightedIndex(idx)}
-                                onMouseLeave={() => setHighlightedIndex(-1)}
-                                onClick={() => {
-                                    if (!hashtagQuery.includes(tag.toLowerCase())) {
-                                        setHashtagQuery([...hashtagQuery, tag.toLowerCase()]);
-                                    }
-                                    setHashtagSearch("");
-                                    setHashtagSuggestions([]);
-                                    setHighlightedIndex(-1);
-                                }}
-                            >
-                                #{tag}
-                            </button>
-                        ))}
-                    </div>
-                )}
-                <button
-                    type="submit"
-                    className="px-6 py-3 rounded-lg bg-blue-500 text-white font-bold text-lg w-auto"
-                    style={{ minHeight: 48 }}
-                >
-                    Añadir hashtag
-                </button>
-            </form>
-        </div>
-    )}
-</div>
-
-            {/* Área para crear nueva publicación */}
-            <div className="border-b border-gray-200 dark:border-gray-700 p-4">
-                <div className="flex space-x-3">
-                    <div className="flex-1">
-                        <button
-                            onClick={() => setShowForm(true)}
-                            className="block w-full p-3 text-left rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-500 dark:text-gray-300 transition"
-                        >
-                            ¿Qué está pasando?
-                        </button>
-                    </div>
+            {/* Sección Sticky de Filtros */}
+            <div className="sticky top-0 z-10 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-black">
+                <div className="flex justify-center gap-0 text-sm font-medium">
+                    <button
+                        className={`flex-1 py-4 text-center transition-colors ${
+                            filter === "general"
+                                ? "border-b-2 border-blue-500 font-bold text-blue-500"
+                                : "text-gray-500 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-900"
+                        }`}
+                        onClick={() => setFilter("general")}
+                    >
+                        General
+                    </button>
+                    <button
+                        className={`flex-1 py-4 text-center transition-colors ${
+                            filter === "following"
+                                ? "border-b-2 border-blue-500 font-bold text-blue-500"
+                                : "text-gray-500 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-900"
+                        }`}
+                        onClick={() => setFilter("following")}
+                    >
+                        Siguiendo
+                    </button>
                 </div>
             </div>
+            {/* Buscador de Hashtags (fuera del sticky) */}
+            <div className="relative px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-black">
+                <div className="max-w-xl mx-auto">
+                    <div className="relative my-4">
+                        <FaHashtag className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-500 text-lg" />
+                        <input
+                            type="text"
+                            value={hashtagSearch}
+                            onChange={(e) => {
+                                setHashtagSearch(e.target.value);
+                                setHighlightedIndex(-1);
+                            }}
+                            placeholder="Buscar por hashtag..."
+                            className="w-full pl-10 pr-4 py-2 rounded-full bg-blue-50 dark:bg-blue-200 border border-blue-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow transition"
+                            autoComplete="off"
+                            onKeyDown={(e) => {
+                                if (hashtagSuggestions.length > 0) {
+                                    if (e.key === "ArrowDown") {
+                                        e.preventDefault();
+                                        setHighlightedIndex((i) =>
+                                            i < hashtagSuggestions.length - 1
+                                                ? i + 1
+                                                : 0
+                                        );
+                                    } else if (e.key === "ArrowUp") {
+                                        e.preventDefault();
+                                        setHighlightedIndex((i) =>
+                                            i > 0
+                                                ? i - 1
+                                                : hashtagSuggestions.length - 1
+                                        );
+                                    } else if (
+                                        e.key === "Enter" &&
+                                        highlightedIndex >= 0
+                                    ) {
+                                        e.preventDefault();
+                                        const tag =
+                                            hashtagSuggestions[
+                                                highlightedIndex
+                                            ];
+                                        setHashtagSearch(`#${tag}`);
+                                        setHashtagSuggestions([]);
+                                    }
+                                }
+                            }}
+                        />
+                    </div>
 
-            {/* Formulario flotante para crear publicación */}
+                    {hashtagSuggestions.length > 0 && (
+                        <div className="absolute left-0 right-0 mt-2 mx-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg z-50 overflow-hidden">
+                            {hashtagSuggestions.map((tag, idx) => (
+                                <button
+                                    key={tag}
+                                    type="button"
+                                    className={`w-full px-4 py-2 text-left transition ${
+                                        highlightedIndex === idx
+                                            ? "bg-blue-50 dark:bg-gray-700"
+                                            : "hover:bg-gray-100 dark:hover:bg-gray-700"
+                                    }`}
+                                    onMouseEnter={() =>
+                                        setHighlightedIndex(idx)
+                                    }
+                                    onClick={() => {
+                                        setHashtagSearch(`#${tag}`);
+                                        setHashtagSuggestions([]);
+                                    }}
+                                >
+                                    #{tag}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </div>
+            {/* Etiquetas activas */}
+            {filter === "hashtag" && hashtagQuery.length > 0 && (
+                <div className="flex gap-2 mt-3 flex-wrap px-4">
+                    {hashtagQuery.map((tag) => (
+                        <span
+                            key={tag}
+                            className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full flex items-center text-sm"
+                        >
+                            #{tag}
+                            <button
+                                type="button"
+                                className="ml-2 text-red-500 hover:text-red-700"
+                                onClick={() =>
+                                    setHashtagQuery(
+                                        hashtagQuery.filter((t) => t !== tag)
+                                    )
+                                }
+                            >
+                                <FaTimes className="w-3 h-3" />
+                            </button>
+                        </span>
+                    ))}
+                </div>
+            )}
+            {/* Formulario de nuevo post */}
+            <div className="border-b border-gray-200 dark:border-gray-700 px-4 py-3">
+                <div className="flex items-center space-x-3 my-4">
+                    <button
+                        onClick={() => setShowForm(true)}
+                        className="flex-1 p-3 text-left rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition"
+                    >
+                        ¿Qué está pasando?
+                    </button>
+                </div>
+            </div>
             {showForm && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                     <div className="bg-white dark:bg-gray-800 rounded-xl w-full max-w-2xl">
@@ -717,26 +701,6 @@ export default function TwitterStyleFeed({
                     </div>
                 </div>
             )}
-              {filter === "hashtag" && hashtagQuery.length > 0 && (
-    <div className="flex gap-2 mt-2 flex-wrap">
-        {hashtagQuery.map((tag, idx) => (
-            <span key={tag} className="bg-blue-100 text-blue-700 px-2 py-1 rounded-full flex items-center">
-                #{tag}
-                <button
-                    type="button"
-                    className="ml-1 text-red-500 hover:text-red-700"
-                    onClick={() =>
-                        setHashtagQuery(hashtagQuery.filter((t) => t !== tag))
-                    }
-                >
-                    ×
-                </button>
-            </span>
-        ))}
-    </div>
-)}
-
-            {/* Listado de publicaciones o estado vacío */}
             {publications.length === 0 && !loadingMore ? (
                 <div className="py-16 text-center">
                     <PaperAirplaneIcon className="mx-auto h-16 w-16 text-gray-400 dark:text-gray-600" />
@@ -875,24 +839,37 @@ export default function TwitterStyleFeed({
                                             {publication.textContent}
                                         </p>
 
-                                         {/* Mostrar hashtags si existen */}
                                         {publication.hashtags?.length > 0 && (
                                             <div className="mt-2 flex flex-wrap gap-2">
-                                                {publication.hashtags.map((tag, index) => (
-                                                    <button
-                                                        key={tag.id || index}
-                                                        type="button"
-                                                        className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 text-sm underline"
-                                                        style={{ background: "none", border: "none", padding: 0, cursor: "pointer" }}
-                                                        onClick={() => handleHashtagClick(tag)}
-                                                    >
-                                                        #{tag.hashtag_text || tag}
-                                                    </button>
-                                                ))}
+                                                {publication.hashtags.map(
+                                                    (tag, index) => (
+                                                        <button
+                                                            key={
+                                                                tag.id || index
+                                                            }
+                                                            type="button"
+                                                            className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 text-sm underline"
+                                                            style={{
+                                                                background:
+                                                                    "none",
+                                                                border: "none",
+                                                                padding: 0,
+                                                                cursor: "pointer",
+                                                            }}
+                                                            onClick={() =>
+                                                                handleHashtagClick(
+                                                                    tag
+                                                                )
+                                                            }
+                                                        >
+                                                            #
+                                                            {tag.hashtag_text ||
+                                                                tag}
+                                                        </button>
+                                                    )
+                                                )}
                                             </div>
                                         )}
-
-                                       
 
                                         {publication.imageURL && (
                                             <div className="mt-3 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
@@ -976,17 +953,6 @@ export default function TwitterStyleFeed({
                                                 type="button"
                                                 className="flex items-center text-gray-500 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400 group"
                                                 onClick={() => {
-                                                    if (
-                                                        !publication ||
-                                                        !publication.id
-                                                    ) {
-                                                        Swal.fire(
-                                                            "Error",
-                                                            "No se encontró la publicación.",
-                                                            "error"
-                                                        );
-                                                        return;
-                                                    }
                                                     const url = `${window.location.origin}/publications/${publication.id}`;
                                                     if (
                                                         navigator.clipboard &&
@@ -1066,14 +1032,12 @@ export default function TwitterStyleFeed({
                         ))}
                     </div>
 
-                    {/* Indicador de carga */}
                     {loadingMore && (
                         <div className="flex justify-center p-4">
                             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 dark:border-blue-400"></div>
                         </div>
                     )}
 
-                    {/* Mensaje cuando no hay más publicaciones */}
                     {!nextPageUrl &&
                         publications.length > 0 &&
                         !loadingMore && (
@@ -1083,15 +1047,6 @@ export default function TwitterStyleFeed({
                         )}
                 </>
             )}
-
-            <ModalSearch
-                open={showModal}
-                onClose={() => setShowModal(false)}
-                authUser={authUser}
-               
-            />
-
-          
         </AuthenticatedLayout>
     );
 }

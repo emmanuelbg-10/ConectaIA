@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { FaUserPlus, FaEnvelope, FaUserFriends, FaTimes } from "react-icons/fa";
 
 export default function ModalAlerts({
@@ -8,6 +8,22 @@ export default function ModalAlerts({
     recentMessages = [],
     recentFollowers = [],
 }) {
+    const modalRef = useRef(null);
+
+    useEffect(() => {
+        function handleClickOutside(event) {
+            if (modalRef.current && !modalRef.current.contains(event.target)) {
+                onClose();
+            }
+        }
+        if (open) {
+            document.addEventListener("mousedown", handleClickOutside);
+        }
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, [open]);
+
     if (!open) return null;
 
     const handleAccept = async (id) => {
@@ -38,7 +54,10 @@ export default function ModalAlerts({
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 px-4 ">
-            <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-xl p-6 text-black dark:text-white relative">
+            <div
+                ref={modalRef}
+                className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-xl p-6 text-black dark:text-white relative"
+            >
                 <button
                     onClick={onClose}
                     className="absolute top-4 right-4 text-gray-500 hover:text-red-500 text-2xl"
@@ -51,7 +70,6 @@ export default function ModalAlerts({
                     Alertas
                 </h2>
 
-                {/* Peticiones de amistad */}
                 <Section title="Peticiones de amistad" icon={<FaUserFriends />}>
                     {friendRequests.length === 0 ? (
                         <EmptyState text="No tienes nuevas peticiones." />
@@ -88,7 +106,6 @@ export default function ModalAlerts({
                     )}
                 </Section>
 
-                {/* Mensajes recientes */}
                 <Section title="Mensajes recientes" icon={<FaEnvelope />}>
                     {recentMessages.length === 0 ? (
                         <EmptyState text="No tienes mensajes nuevos." />
@@ -109,7 +126,6 @@ export default function ModalAlerts({
                     )}
                 </Section>
 
-                {/* Nuevos seguidores */}
                 <Section title="Nuevos seguidores" icon={<FaUserPlus />}>
                     {recentFollowers.length === 0 ? (
                         <EmptyState text="No tienes nuevos seguidores." />
