@@ -129,10 +129,10 @@ Route::get('/hashtags/search', function (Illuminate\Http\Request $request) {
     return response()->json(['hashtags' => $hashtags]);
 });
 
-Route::get('chat', function () {
-    return Inertia::render('Chats/ChatList', [
+Route::get('chats', function () {
+    return Inertia::render('Chats', [
         'auth' => [
             'user' => Auth::user(),
         ],
     ]);
-})->name('chat');
+})->name('chats');
