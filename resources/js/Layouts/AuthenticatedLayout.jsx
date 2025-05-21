@@ -5,16 +5,16 @@ import {
     FiUser,
     FiSettings,
     FiUsers,
+    FiLogOut, // Make sure to import FiLogOut
 } from "react-icons/fi";
 import ApplicationLogo from "@/Components/ApplicationLogo";
 import NavLink from "@/Components/NavLink";
-import { Link } from "@inertiajs/react";
+import { Link, usePage, useForm } from "@inertiajs/react"; // Import useForm
 import React, { useState, useEffect } from "react";
 import ChatSidebar from "@/Components/ChatSidebar";
 import ChatWindow from "@/Components/ChatWindow";
 import ModalAlerts from "@/Components/ModalAlerts";
 import ModalSearch from "@/Components/ModalSearch";
-import { usePage } from "@inertiajs/react";
 
 export default function AuthenticatedLayout({ children }) {
     const [windowWidth, setWindowWidth] = useState(window.innerWidth);
@@ -25,11 +25,15 @@ export default function AuthenticatedLayout({ children }) {
     const [alertsData, setAlertsData] = useState({
         recentMessages: [],
         recentFollowers: [],
+        friendRequests: [], // Added friendRequests based on useEffect logic
     });
     const [hasNewAlerts, setHasNewAlerts] = useState(false);
     const [showSearch, setShowSearch] = useState(false);
     const { props } = usePage();
     const authUser = props.auth?.user;
+
+    // For logout functionality
+    const { post } = useForm(); // Destructure post from useForm
 
     useEffect(() => {
         const handleResize = () => {
@@ -80,7 +84,7 @@ export default function AuthenticatedLayout({ children }) {
         <div className="min-h-screen w-full bg-white text-black dark:bg-black flex">
             {/* Sidebar principal */}
             <aside className="hidden md:flex lg:flex flex-col justify-center items-center gap-8 bg-white dark:bg-black border-r dark:border-gray-800 w-64 max-w-[100vw] md:w-48 lg:w-64 py-8 fixed top-0 left-0 h-screen z-40 overflow-y-auto">
-                <Link href="/dashboard">
+                <Link href="/publications">
                     <ApplicationLogo className="h-16 w-16 text-black dark:text-white" />
                 </Link>
                 <NavLink
@@ -179,7 +183,8 @@ export default function AuthenticatedLayout({ children }) {
                             openAlerts();
                         }}
                     />
-                    <Link href="/">
+                    {/* Logo with reload on click for mobile */}
+                    <Link href="/publications">
                         <ApplicationLogo className="h-8 w-8 text-black dark:text-white" />
                     </Link>
                     <NavLink

@@ -1,16 +1,21 @@
-import React from "react";
+import React, { useState } from "react";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import { Head, router } from "@inertiajs/react";
 import { FiLogOut } from "react-icons/fi";
 import AvatarUploader from "@/Components/AvatarUploader";
+import Loader from "@/Components/Loader";
 
 export default function Profile({ auth }) {
     const user = auth.user;
+    const [loggingOut, setLoggingOut] = useState(false);
+
+    if (loggingOut) {
+        return <Loader />;
+    }
 
     return (
         <AuthenticatedLayout>
             <Head title="Perfil" />
-
             <AvatarUploader user={user} />
 
             <div className="relative max-w-xl mx-auto mt-10 bg-white dark:bg-black border dark:border-gray-800 rounded-2xl shadow-md p-8 text-center">
@@ -23,6 +28,7 @@ export default function Profile({ auth }) {
 
                 <button
                     onClick={() => {
+                        setLoggingOut(true);
                         router.post(
                             route("logout"),
                             {},
