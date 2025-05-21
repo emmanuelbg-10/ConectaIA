@@ -89,7 +89,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 // Chat
-Route::get('/chat', [ChatController::class, 'index'])->name('chat.index');
+// Route::get('/chat', [ChatController::class, 'index'])->name('chat.index');
 
 // Moderación de texto
 Route::post('/moderate-text', [ModerationController::class, 'moderate'])
@@ -125,3 +125,11 @@ Route::get('/hashtags/search', function (Illuminate\Http\Request $request) {
         ->pluck('hashtag_text');
     return response()->json(['hashtags' => $hashtags]);
 });
+
+Route::get('chat', function () {
+    return Inertia::render('Chats/ChatList', [
+        'auth' => [
+            'user' => Auth::user(),
+        ],
+    ]);
+})->name('chat');
