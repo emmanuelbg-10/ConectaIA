@@ -199,6 +199,12 @@ class User extends Authenticatable // implements MustVerifyEmail (si aplica)
         return $this->hasMany(\App\Models\Response::class);
     }
 
+    /**
+     * The friends of a specific user. Many-to-many.
+     * 
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
+     * Returns a many-to-many relationship instance.
+     */
     public function friends()
     {
         return $this->belongsToMany(User::class, 'friendships', 'sender_id', 'receiver_id')
