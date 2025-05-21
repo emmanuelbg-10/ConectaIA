@@ -116,9 +116,17 @@ public function show(Publication $publication)
     // Agrega las respuestas anidadas al objeto publication
     $publication->responses = $responsesTree;
 
+    // --- AQUI AÑADE LOS LIKES ---
+    $publication->likesCount = $publication->likes()->count();
+    $publication->responsesCount = $publication->responses()->count();
+    $publication->likedByMe = request()->user()
+        ? $publication->likes()->where('user_id', request()->user()->id)->exists()
+        : false;
+    // ----------------------------
+
     return Inertia::render('Publications/Show', [
         'publication' => $publication,
-         'authUser' => auth()->user(),
+        'authUser' => auth()->user(),
     ]);
 }
 
@@ -138,23 +146,21 @@ public function show(Publication $publication)
         $validated = $request->validate([
             'textContent' => 'required|string|max:500',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif',
+
         ]);
     
         $imageURL = null;
     
         if ($request->hasFile('image')) {
             $uploadedFile = $request->file('image');
-    
             try {
                 $base64Image = 'data:' . $uploadedFile->getMimeType() . ';base64,' . base64_encode($uploadedFile->getContent());
-    
-                $uploaded = Cloudinary::uploadApi()->upload($base64Image, [
+                $uploaded = \CloudinaryLabs\CloudinaryLaravel\Facades\Cloudinary::uploadApi()->upload($base64Image, [
                     'resource_type' => 'image',
                 ]);
-    
                 $imageURL = $uploaded['secure_url'];
             } catch (\Cloudinary\Api\Exception\ApiException $e) {
-                dd("Error de Cloudinary:", $e->getMessage());
+                return back()->withErrors(['image' => "Error de Cloudinary: " . $e->getMessage()]);
             }
         }
     
@@ -162,30 +168,52 @@ public function show(Publication $publication)
             'user_id' => auth()->id(),
             'textContent' => $validated['textContent'],
             'imageURL' => $imageURL,
-        ])->load('user', 'hashtags');
+        ]);
     
-  // Agregar campos extra igual que en index
-  $publication->likesCount = 0;
-  $publication->responsesCount = 0;
-  $publication->likedByMe = false;
+        $hashtags = $request->input('hashtags');
 
-  $authUserId = $request->user() ? $request->user()->id : null;
-  $friendship = \App\Models\Friendship::where(function($q) use ($publication, $authUserId) {
-      $q->where('sender_id', $authUserId)->where('receiver_id', $publication->user_id);
-  })->orWhere(function($q) use ($publication, $authUserId) {
-      $q->where('sender_id', $publication->user_id)->where('receiver_id', $authUserId);
-  })->first();
+        // Si viene como string JSON, decodifica:
+        if (is_string($hashtags)) {
+            $hashtags = json_decode($hashtags, true);
+        }
 
-  $publication->friend_status = $friendship ? $friendship->status : 'none';
+        // Log para depuración
+        Log::info('Hashtags recibidos para guardar:', ['hashtags' => $hashtags]);
 
-  $following = \App\Models\Following::where('follower_id', $authUserId)
-      ->where('followed_id', $publication->user_id)
-      ->exists();
-
-  $publication->following = $following;
-
-  return redirect()->route('publications.index')->with('success', 'Publicación creada con éxito.');
-
+        $hashtagIds = [];
+        if (!empty($hashtags) && is_array($hashtags)) {
+            foreach ($hashtags as $tag) {
+                if (trim($tag) === '') continue;
+                $hashtag = \App\Models\Hashtag::firstOrCreate(['hashtag_text' => trim($tag)]);
+                $hashtagIds[] = $hashtag->id;
+            }
+            $publication->hashtags()->sync($hashtagIds);
+        } else {
+            Log::info('No se recibieron hashtags válidos.');
+        }
+    
+        // Opcional: cargar relaciones y campos extra para la respuesta
+        $publication->load('user', 'hashtags');
+        $publication->likesCount = 0;
+        $publication->responsesCount = 0;
+        $publication->likedByMe = false;
+    
+        $authUserId = $request->user() ? $request->user()->id : null;
+        $friendship = \App\Models\Friendship::where(function($q) use ($publication, $authUserId) {
+            $q->where('sender_id', $authUserId)->where('receiver_id', $publication->user_id);
+        })->orWhere(function($q) use ($publication, $authUserId) {
+            $q->where('sender_id', $publication->user_id)->where('receiver_id', $authUserId);
+        })->first();
+    
+        $publication->friend_status = $friendship ? $friendship->status : 'none';
+    
+        $following = \App\Models\Following::where('follower_id', $authUserId)
+            ->where('followed_id', $publication->user_id)
+            ->exists();
+    
+        $publication->following = $following;
+    
+        return redirect()->back(303)->with('success', 'Publicación creada con éxito.');
     }
 
     /**
@@ -214,7 +242,7 @@ public function show(Publication $publication)
 
         $publication->hashtags()->detach();
         if ($request->hashtags) {
-            $hashtags = explode(',', $request->hashtags);
+            $hashtags = json_decode($request->input('hashtags', '[]'), true);
             foreach ($hashtags as $tag) {
                 $hashtag = Hashtag::firstOrCreate(['hashtag_text' => trim($tag)]);
                 $publication->hashtags()->attach($hashtag->id);

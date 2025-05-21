@@ -87,20 +87,27 @@ class AdminUserController extends Controller
                  return Redirect::route('admin.users.index')->with('error', 'No puedes banear al único administrador.');
             }
         }
-
+            // Soft delete de todas sus publicaciones
+        $user->publications()->delete();
 
         $user->delete(); // Soft delete
 
+
+        // Soft delete de todas sus respuestas
+        $user->responses()->delete();
+
         return Redirect::route('admin.users.index')->with('success', 'Usuario baneado correctamente.');
     }
-    
-     public function restore($user) 
+
+    public function restore($user)
     {
-       
+
         $user = User::withTrashed()->findOrFail($user);
-         $user->restore(); // Simplemente llama a restore() en el modelo encontrado
+        $user->restore(); // Simplemente llama a restore() en el modelo encontrado
+
+        // Restaura todas sus publicaciones soft-deleted
+        $user->publications()->withTrashed()->restore();
 
         return Redirect::route('admin.users.index')->with('success', 'Usuario restaurado correctamente.');
     }
-
 }

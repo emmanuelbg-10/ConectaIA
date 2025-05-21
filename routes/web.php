@@ -116,3 +116,12 @@ Route::get('/alerts/data', [App\Http\Controllers\AlertController::class, 'index'
 
 Route::middleware('auth')->get('/messages/{friendId}', [MessageController::class, 'conversation']);
 Route::post('/messages/send', [MessageController::class, 'send'])->middleware('auth');
+Route::get('/search', [\App\Http\Controllers\SearchController::class, 'search'])->name('search');
+Route::post('/hashtags/suggest', [\App\Http\Controllers\ModerationController::class, 'suggestHashtags']);
+Route::get('/hashtags/search', function (Illuminate\Http\Request $request) {
+    $q = $request->query('q', '');
+    $hashtags = \App\Models\Hashtag::where('hashtag_text', 'like', $q . '%')
+        ->limit(10)
+        ->pluck('hashtag_text');
+    return response()->json(['hashtags' => $hashtags]);
+});

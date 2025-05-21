@@ -13,6 +13,7 @@ import React, { useState, useEffect } from "react";
 import ChatSidebar from "@/Components/ChatSidebar";
 import ChatWindow from "@/Components/ChatWindow";
 import ModalAlerts from "@/Components/ModalAlerts";
+import ModalSearch from "@/Components/ModalSearch";
 import { usePage } from "@inertiajs/react";
 
 export default function AuthenticatedLayout({ children }) {
@@ -26,6 +27,7 @@ export default function AuthenticatedLayout({ children }) {
         recentFollowers: [],
     });
     const [hasNewAlerts, setHasNewAlerts] = useState(false);
+    const [showSearch, setShowSearch] = useState(false);
     const { props } = usePage();
     const authUser = props.auth?.user;
 
@@ -89,7 +91,15 @@ export default function AuthenticatedLayout({ children }) {
                         "/publications"
                     )}
                 />
-                <NavLink href="/search" icon={FiSearch} label="Search" />
+                <NavLink
+                    href="#"
+                    icon={FiSearch}
+                    label="Search"
+                    onClick={(e) => {
+                        e.preventDefault();
+                        setShowSearch(true);
+                    }}
+                />
                 <div className="relative">
                     <NavLink
                         href="#"
@@ -151,7 +161,15 @@ export default function AuthenticatedLayout({ children }) {
                             "/publications"
                         )}
                     />
-                    <NavLink href="/search" icon={FiSearch} label="Search" />
+                    <NavLink
+                        href="#"
+                        icon={FiSearch}
+                        label="Search"
+                        onClick={(e) => {
+                            e.preventDefault();
+                            setShowSearch(true);
+                        }}
+                    />
                     <NavLink
                         href="#"
                         icon={FiBell}
@@ -193,6 +211,11 @@ export default function AuthenticatedLayout({ children }) {
                 open={showAlerts}
                 onClose={() => setShowAlerts(false)}
                 {...alertsData}
+            />
+            <ModalSearch
+                open={showSearch}
+                onClose={() => setShowSearch(false)}
+                authUser={authUser}
             />
         </div>
     );

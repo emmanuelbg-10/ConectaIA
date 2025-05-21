@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import { Head, useForm, usePage } from "@inertiajs/react";
+import { Inertia } from "@inertiajs/inertia";
 import Swal from "sweetalert2";
 import {
     PaperAirplaneIcon,
@@ -8,6 +9,7 @@ import {
     XIcon,
 } from "@heroicons/react/outline";
 import UserMenu from "@/Components/UserMenu";
+import ModalSearch from "@/Components/ModalSearch";
 
 function getCsrfToken() {
     const csrf = document.querySelector('meta[name="csrf-token"]');
@@ -35,6 +37,7 @@ export default function TwitterStyleFeed({
             textContent: "",
             image: null,
             preview: null,
+            hashtags: [],
         },
         { resetOnSuccess: false }
     );
@@ -48,6 +51,12 @@ export default function TwitterStyleFeed({
         initialPublications.links?.next || initialPublications.next_page_url
     );
     const [loadingMore, setLoadingMore] = useState(false);
+    const [filter, setFilter] = useState("general");
+    const [hashtagSearch, setHashtagSearch] = useState("");
+    const [hashtagQuery, setHashtagQuery] = useState([]); // ahora es array
+    const [showModal, setShowModal] = useState(false);
+    const [hashtagSuggestions, setHashtagSuggestions] = useState([]);
+    const [highlightedIndex, setHighlightedIndex] = useState(-1);
 
     useEffect(() => {
         setPublications(
@@ -57,6 +66,7 @@ export default function TwitterStyleFeed({
         );
         setNextPageUrl(initialPublications.next_page_url);
     }, [initialPublications]);
+
     const loadMorePublications = async () => {
         if (!nextPageUrl || loadingMore) return;
         setLoadingMore(true);
@@ -84,7 +94,6 @@ export default function TwitterStyleFeed({
             setLoadingMore(false);
         }
     };
-
     useEffect(() => {
         const handleScroll = () => {
             const { scrollTop, scrollHeight, clientHeight } =
@@ -120,6 +129,7 @@ export default function TwitterStyleFeed({
         });
 
         try {
+            console.log("Enviando a moderación...");
             const geminiRes = await fetch("moderate-text", {
                 method: "POST",
                 headers: {
@@ -134,14 +144,17 @@ export default function TwitterStyleFeed({
             try {
                 geminiData = await geminiRes.json();
             } catch (jsonErr) {
+                console.log("Error al parsear respuesta de moderación:", jsonErr);
                 Swal.fire(
                     "Error",
                     "Respuesta inesperada del servidor de moderación.",
                     "error"
                 );
-                setShowForm(false); // <-- CIERRA EL FORMULARIO
+                setShowForm(false);
                 return;
             }
+
+            console.log("Respuesta de moderación:", geminiData);
 
             if (!geminiRes.ok) {
                 Swal.fire(
@@ -149,7 +162,7 @@ export default function TwitterStyleFeed({
                     geminiData.message || "No se pudo validar el contenido.",
                     "error"
                 );
-                setShowForm(false); // <-- CIERRA EL FORMULARIO
+                setShowForm(false);
                 return;
             }
 
@@ -160,35 +173,145 @@ export default function TwitterStyleFeed({
                         "Tu publicación contiene contenido ofensivo.",
                     "warning"
                 );
-                setShowForm(false); // <-- CIERRA EL FORMULARIO
+                setShowForm(false);
                 return;
             }
         } catch (err) {
+            console.log("Error en la moderación:", err);
             Swal.fire(
                 "Error",
                 "No se pudo validar el contenido. Intenta de nuevo.",
                 "error"
             );
-            setShowForm(false); // <-- CIERRA EL FORMULARIO
+            setShowForm(false);
             return;
+        }
+
+        // Obtener hashtags sugeridos
+        console.log("Llamando a sugerencia de hashtags...");
+        const hashtagsRes = await fetch("/hashtags/suggest", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-Requested-With": "XMLHttpRequest",
+                "X-CSRF-TOKEN": getCsrfToken(),
+            },
+            body: JSON.stringify({ text: data.textContent }),
+        });
+        
+        const hashtagsData = await hashtagsRes.json();
+        const suggestedHashtags = hashtagsData.hashtags || [];
+        let hashtagsToSend = [];
+
+        if (suggestedHashtags.length > 0) {
+            let manualHashtags = [];
+            let htmlContent = () => `
+                <div style="text-align:left;" id="hashtags-modal-content">
+                    ${suggestedHashtags
+                        .map(
+                            (tag, i) =>
+                                `<label style="display:block;">
+                                    <input type="checkbox" value="${tag}" id="hashtag_${i}" checked />
+                                    #${tag}
+                                </label>`
+                        )
+                        .join("")}
+                    <div style="margin-top:10px;">
+                        <input type="text" id="manualHashtagInput" placeholder="Añadir hashtag manual" style="width:70%;" maxlength="30"/>
+                        <button type="button" id="addManualHashtagBtn" style="margin-left:5px;">Añadir</button>
+                    </div>
+                    <div id="manualHashtagsList" style="margin-top:5px;"></div>
+                    <div id="hashtagError" style="color:red;margin-top:5px;"></div>
+                </div>
+            `;
+
+            const swalResult = await Swal.fire({
+                title: "Selecciona hashtags sugeridos o añade propios",
+                html: htmlContent(),
+                focusConfirm: false,
+                didOpen: () => {
+                    const input = document.getElementById("manualHashtagInput");
+                    const btn = document.getElementById("addManualHashtagBtn");
+                    const list = document.getElementById("manualHashtagsList");
+                    const errorDiv = document.getElementById("hashtagError");
+
+                    const renderManualList = () => {
+                        list.innerHTML = manualHashtags
+                            .map(
+                                (tag, idx) =>
+                                    `<span style="display:inline-block;background:#e0e7ff;color:#3730a3;padding:2px 8px;border-radius:12px;margin:2px;">
+                                        #${tag}
+                                        <button type="button" data-idx="${idx}" style="background:none;border:none;color:#a00;font-weight:bold;cursor:pointer;">&times;</button>
+                                    </span>`
+                            )
+                            .join("");
+                        // Botón para eliminar
+                        list.querySelectorAll("button[data-idx]").forEach((btn) => {
+                            btn.onclick = () => {
+                                manualHashtags.splice(Number(btn.dataset.idx), 1);
+                                renderManualList();
+                            };
+                        });
+                    };
+
+                    btn.onclick = () => {
+                        let val = input.value.trim().replace(/^#/, "");
+                        if (!val) return;
+                        if (
+                            manualHashtags.length + suggestedHashtags.filter((_, i) =>
+                                document.getElementById(`hashtag_${i}`).checked
+                            ).length >= 5
+                        ) {
+                            errorDiv.textContent = "Máximo 5 hashtags en total.";
+                            return;
+                        }
+                        if (
+                            manualHashtags.includes(val) ||
+                            suggestedHashtags.some(
+                                (tag, i) =>
+                                    tag === val &&
+                                    document.getElementById(`hashtag_${i}`).checked
+                            )
+                        ) {
+                            errorDiv.textContent = "Hashtag repetido.";
+                            return;
+                        }
+                        manualHashtags.push(val);
+                        input.value = "";
+                        errorDiv.textContent = "";
+                        renderManualList();
+                    };
+                },
+                preConfirm: () => {
+                    const selected = suggestedHashtags.filter((_, i) =>
+                        document.getElementById(`hashtag_${i}`).checked
+                    );
+                    const total = selected.length + manualHashtags.length;
+                    if (total > 5) {
+                        Swal.showValidationMessage("Máximo 5 hashtags en total.");
+                        return false;
+                    }
+                    return [...selected, ...manualHashtags];
+                },
+                confirmButtonText: "Usar seleccionados",
+                showCancelButton: true,
+                cancelButtonText: "Sin hashtags",
+            });
+
+            hashtagsToSend = swalResult.isConfirmed ? (swalResult.value || []) : [];
+            console.log("Hashtags seleccionados para enviar:", hashtagsToSend);
         }
 
         Swal.close();
 
-        const formData = new FormData();
-        formData.append("textContent", data.textContent);
-        if (data.image) {
-            formData.append("image", data.image);
-        }
-
-        // Creación optimista (opcional)
+        // Creación optimista
         const optimisticPublication = {
             id: `temp-${Date.now()}`,
             textContent: data.textContent,
             user: authUser,
             created_at: new Date().toISOString(),
             imageURL: data.preview,
-            hashtags: [],
+            hashtags: hashtagsToSend,
         };
 
         setPublications((prev) => [
@@ -197,54 +320,61 @@ export default function TwitterStyleFeed({
         ]);
         setShowForm(false);
 
-        post(route("publications.store"), {
-            data: formData,
-            preserveScroll: true,
-            preserveState: true,
-            onSuccess: () => {
-                reset();
-                setData("preview", null);
-                Swal.fire(
-                    "¡Publicado!",
-                    "Tu publicación fue enviada correctamente.",
-                    "success"
-                );
-                if (pageProps.newPublication) {
-                    setPublications((prev) => [
-                        pageProps.newPublication,
-                        ...prev.filter(
-                            (p) => p.id !== optimisticPublication.id
-                        ),
-                    ]);
-                }
-            },
-            onError: () => {
-                setPublications((prev) =>
-                    prev.filter((p) => p.id !== optimisticPublication.id)
-                );
-                Swal.fire(
-                    "Error",
-                    "No se pudo publicar. Intenta de nuevo.",
-                    "error"
-                );
-            },
+      
+
+        console.log("Enviando publicación al backend...");
+        console.log("Payload a enviar:", {
+            textContent: data.textContent,
+            image: data.image ? "[FILE]" : null,
+            hashtags: hashtagsToSend,
         });
 
-        return false; // <-- Esto previene cualquier submit tradicional
+     
+            Inertia.post(route("publications.store"), {
+                textContent: data.textContent,
+                image: data.image,
+                hashtags: hashtagsToSend,
+            }, {
+                preserveScroll: true,
+                preserveState: true,
+                onSuccess: () => {
+                    reset();
+                    setData("preview", null);
+                    setShowForm(false);
+                    Swal.fire(
+                        "¡Publicado!",
+                        "Tu publicación fue enviada correctamente.",
+                        "success"
+                    );
+                },
+                onError: () => {
+                    setPublications((prev) =>
+                        prev.filter((p) => p.id !== optimisticPublication.id)
+                    );
+                    Swal.fire(
+                        "Error",
+                        "No se pudo publicar. Intenta de nuevo.",
+                        "error"
+                    );
+                },
+            });
+      
+
+        return false;
     };
 
     const handleLike = async (publicationId) => {
         try {
             const res = await fetch(`publications/${publicationId}/like`, {
                 method: "POST",
-                headers: {
+                headers:
+                 {
                     "X-CSRF-TOKEN": getCsrfToken(),
                     "X-Requested-With": "XMLHttpRequest",
                     Accept: "application/json",
                 },
             });
             if (res.status === 419) {
-                // Si hay error de CSRF, recarga la página para sincronizar tokens
                 window.location.reload();
                 return;
             }
@@ -275,21 +405,58 @@ export default function TwitterStyleFeed({
         return new Date(dateString).toLocaleDateString("es-ES", options);
     };
 
-    useEffect(() => {
-        setPublications(
-            (initialPublications.data || initialPublications).map(
-                normalizePublication
-            )
+    const handleHashtagClick = (tag) => {
+        setFilter("hashtag");
+        const tagText = (tag.hashtag_text || tag).toLowerCase().replace(/^#/, "");
+        setHashtagQuery((prev) =>
+            prev.includes(tagText) ? prev : [...prev, tagText]
         );
-        setNextPageUrl(initialPublications.next_page_url);
-    }, [initialPublications]);
+    };
 
-    console.log(
-        "is_admin:",
-        authUser.is_admin,
-        "is_moderator:",
-        authUser.is_moderator
-    );
+    // Filtrado de publicaciones
+    const filteredPublications =
+        filter === "general"
+            ? publications
+            : filter === "following"
+            ? publications.filter(
+                  (pub) => pub.following || pub.user.id === authUser.id
+              )
+            : filter === "hashtag" && hashtagQuery.length > 0
+            ? publications.filter(
+                  (pub) =>
+                      pub.hashtags &&
+                      hashtagQuery.every((q) =>
+                          pub.hashtags.some(
+                              (tag) =>
+                                  (tag.hashtag_text || tag)
+                                      .toLowerCase()
+                                      .replace(/^#/, "") === q
+                          )
+                      )
+              )
+            : publications;
+
+    const fetchHashtagSuggestions = async (query) => {
+        if (!query) {
+            setHashtagSuggestions([]);
+            return;
+        }
+        try {
+            const res = await fetch(`/hashtags/search?q=${encodeURIComponent(query)}`);
+            const data = await res.json();
+            setHashtagSuggestions(data.hashtags || []);
+        } catch {
+            setHashtagSuggestions([]);
+        }
+    };
+
+    useEffect(() => {
+        if (filter === "hashtag" && hashtagSearch.length > 0) {
+            fetchHashtagSuggestions(hashtagSearch.trim().replace(/^#/, ""));
+        } else {
+            setHashtagSuggestions([]);
+        }
+    }, [hashtagSearch, filter]);
 
     return (
         <AuthenticatedLayout
@@ -305,7 +472,139 @@ export default function TwitterStyleFeed({
         >
             <Head title="Publicaciones" />
 
-            {/* Área para crear nueva publicación (siempre visible) */}
+            {/* Filtros para el feed */}
+            <div className="flex flex-col sm:flex-row justify-center gap-2 sm:gap-4 mb-4 w-full">
+    <div className="flex flex-row justify-center gap-2 sm:gap-4 w-full sm:w-auto">
+        <button
+            className={`px-6 py-3 rounded-lg font-bold text-lg transition ${
+                filter === "general"
+                    ? "bg-blue-600 text-white shadow"
+                    : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200"
+            }`}
+            onClick={() => setFilter("general")}
+            style={{ minWidth: 0, minHeight: 48 }}
+        >
+            General
+        </button>
+        <button
+            className={`px-6 py-3 rounded-lg font-bold text-lg transition ${
+                filter === "following"
+                    ? "bg-blue-600 text-white shadow"
+                    : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200"
+            }`}
+            onClick={() => setFilter("following")}
+            style={{ minWidth: 0, minHeight: 48 }}
+        >
+            Siguiendo
+        </button>
+        <button
+            className={`px-6 py-3 rounded-lg font-bold text-lg transition ${
+                filter === "hashtag"
+                    ? "bg-blue-600 text-white shadow"
+                    : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200"
+            }`}
+            onClick={() => setFilter("hashtag")}
+            style={{ minWidth: 0, minHeight: 48 }}
+        >
+            Buscar hashtag
+        </button>
+    </div>
+    {filter === "hashtag" && (
+        <div className="w-full sm:w-auto flex justify-center">
+            <form
+                onSubmit={e => {
+                    e.preventDefault();
+                    let tag = hashtagSearch.trim().replace(/^#/, "");
+                    // Si hay sugerencias y una está seleccionada con flechas, usar esa
+                    if (highlightedIndex >= 0 && hashtagSuggestions[highlightedIndex]) {
+                        tag = hashtagSuggestions[highlightedIndex];
+                    }
+                    if (tag && !hashtagQuery.includes(tag.toLowerCase())) {
+                        setHashtagQuery([...hashtagQuery, tag.toLowerCase()]);
+                    }
+                    setHashtagSearch("");
+                    setHashtagSuggestions([]);
+                    setHighlightedIndex(-1);
+                }}
+                className="flex flex-row items-stretch gap-2 w-full sm:w-auto relative"
+                style={{ minHeight: 48 }}
+            >
+                <input
+                    type="text"
+                    value={hashtagSearch}
+                    onChange={e => {
+                        setHashtagSearch(e.target.value);
+                        setHighlightedIndex(-1);
+                    }}
+                    placeholder="Ej: futbol"
+                    className="px-6 py-3 rounded-lg border border-gray-300 dark:bg-gray-700 dark:text-white font-bold text-lg w-full sm:w-auto"
+                    style={{ minWidth: 0, minHeight: 48 }}
+                    autoComplete="off"
+                    onKeyDown={e => {
+                        if (hashtagSuggestions.length > 0) {
+                            if (e.key === "ArrowDown") {
+                                e.preventDefault();
+                                setHighlightedIndex(i =>
+                                    i < hashtagSuggestions.length - 1 ? i + 1 : 0
+                                );
+                            } else if (e.key === "ArrowUp") {
+                                e.preventDefault();
+                                setHighlightedIndex(i =>
+                                    i > 0 ? i - 1 : hashtagSuggestions.length - 1
+                                );
+                            } else if (e.key === "Enter" && highlightedIndex >= 0) {
+                                e.preventDefault();
+                                const tag = hashtagSuggestions[highlightedIndex];
+                                if (tag && !hashtagQuery.includes(tag.toLowerCase())) {
+                                    setHashtagQuery([...hashtagQuery, tag.toLowerCase()]);
+                                }
+                                setHashtagSearch("");
+                                setHashtagSuggestions([]);
+                                setHighlightedIndex(-1);
+                            }
+                        }
+                    }}
+                />
+                {hashtagSuggestions.length > 0 && (
+                    <div className="absolute left-0 top-full mt-1 w-full sm:w-60 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded shadow z-50">
+                        {hashtagSuggestions.map((tag, idx) => (
+                            <button
+                                key={tag}
+                                type="button"
+                                className={`block w-full text-left px-3 py-2 hover:bg-blue-100 dark:hover:bg-blue-900 ${
+                                    highlightedIndex === idx
+                                        ? "bg-blue-100 dark:bg-blue-900"
+                                        : ""
+                                }`}
+                                onMouseEnter={() => setHighlightedIndex(idx)}
+                                onMouseLeave={() => setHighlightedIndex(-1)}
+                                onClick={() => {
+                                    if (!hashtagQuery.includes(tag.toLowerCase())) {
+                                        setHashtagQuery([...hashtagQuery, tag.toLowerCase()]);
+                                    }
+                                    setHashtagSearch("");
+                                    setHashtagSuggestions([]);
+                                    setHighlightedIndex(-1);
+                                }}
+                            >
+                                #{tag}
+                            </button>
+                        ))}
+                    </div>
+                )}
+                <button
+                    type="submit"
+                    className="px-6 py-3 rounded-lg bg-blue-500 text-white font-bold text-lg w-auto"
+                    style={{ minHeight: 48 }}
+                >
+                    Añadir hashtag
+                </button>
+            </form>
+        </div>
+    )}
+</div>
+
+            {/* Área para crear nueva publicación */}
             <div className="border-b border-gray-200 dark:border-gray-700 p-4">
                 <div className="flex space-x-3">
                     <div className="flex-1">
@@ -418,6 +717,24 @@ export default function TwitterStyleFeed({
                     </div>
                 </div>
             )}
+              {filter === "hashtag" && hashtagQuery.length > 0 && (
+    <div className="flex gap-2 mt-2 flex-wrap">
+        {hashtagQuery.map((tag, idx) => (
+            <span key={tag} className="bg-blue-100 text-blue-700 px-2 py-1 rounded-full flex items-center">
+                #{tag}
+                <button
+                    type="button"
+                    className="ml-1 text-red-500 hover:text-red-700"
+                    onClick={() =>
+                        setHashtagQuery(hashtagQuery.filter((t) => t !== tag))
+                    }
+                >
+                    ×
+                </button>
+            </span>
+        ))}
+    </div>
+)}
 
             {/* Listado de publicaciones o estado vacío */}
             {publications.length === 0 && !loadingMore ? (
@@ -441,10 +758,11 @@ export default function TwitterStyleFeed({
             ) : (
                 <>
                     <div className="divide-y divide-gray-200 dark:divide-gray-700">
-                        {publications.map((publication) => (
+                        {filteredPublications.map((publication) => (
                             <div
                                 key={publication.id}
                                 className="p-4 hover:bg-gray-50 dark:hover:bg-gray-900 transition"
+                                id={`publication-${publication.id}`}
                             >
                                 <div className="flex space-x-3">
                                     {publication.user.avatarURL ? (
@@ -557,6 +875,25 @@ export default function TwitterStyleFeed({
                                             {publication.textContent}
                                         </p>
 
+                                         {/* Mostrar hashtags si existen */}
+                                        {publication.hashtags?.length > 0 && (
+                                            <div className="mt-2 flex flex-wrap gap-2">
+                                                {publication.hashtags.map((tag, index) => (
+                                                    <button
+                                                        key={tag.id || index}
+                                                        type="button"
+                                                        className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 text-sm underline"
+                                                        style={{ background: "none", border: "none", padding: 0, cursor: "pointer" }}
+                                                        onClick={() => handleHashtagClick(tag)}
+                                                    >
+                                                        #{tag.hashtag_text || tag}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                       
+
                                         {publication.imageURL && (
                                             <div className="mt-3 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
                                                 <img
@@ -607,7 +944,6 @@ export default function TwitterStyleFeed({
                                             >
                                                 <div className="p-2 rounded-full group-hover:bg-red-50 dark:group-hover:bg-red-900">
                                                     {publication.likedByMe ? (
-                                                        // Corazón relleno
                                                         <svg
                                                             className="h-5 w-5"
                                                             fill="currentColor"
@@ -616,7 +952,6 @@ export default function TwitterStyleFeed({
                                                             <path d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" />
                                                         </svg>
                                                     ) : (
-                                                        // Corazón vacío
                                                         <svg
                                                             className="h-5 w-5"
                                                             fill="none"
@@ -677,7 +1012,6 @@ export default function TwitterStyleFeed({
                                                                 );
                                                             });
                                                     } else {
-                                                        // Fallback: selecciona y copia usando un input temporal
                                                         const tempInput =
                                                             document.createElement(
                                                                 "input"
@@ -749,6 +1083,15 @@ export default function TwitterStyleFeed({
                         )}
                 </>
             )}
+
+            <ModalSearch
+                open={showModal}
+                onClose={() => setShowModal(false)}
+                authUser={authUser}
+               
+            />
+
+          
         </AuthenticatedLayout>
     );
 }

@@ -12,6 +12,7 @@ import {
     FiX,
     FiSend,
 } from "react-icons/fi";
+import PublicationActions from "@/Components/PublicationActions";
 
 const csrf = document.querySelector('meta[name="csrf-token"]');
 const csrfToken = csrf ? csrf.getAttribute("content") : "";
@@ -109,6 +110,7 @@ function ResponseItem({
                         </div>
                     )}
                 </div>
+                
                 <div className="flex-1">
                     <div className="flex items-center justify-between">
                         <span className="font-semibold text-gray-800 dark:text-gray-200">
@@ -314,7 +316,7 @@ function ResponseItem({
     );
 }
 
-export default function Show({ publication, authUser }) {
+export default function Show({ publication: initialPublication, authUser }) {
     // Para responder a la publicación principal
     const [pubText, setPubText] = useState("");
     const [processing, setProcessing] = useState(false);
@@ -330,6 +332,9 @@ export default function Show({ publication, authUser }) {
 
     // Estado para paginación de respuestas
     const [visibleCount, setVisibleCount] = useState(10);
+
+    // Estado para la publicación (para manejar el "me gusta")
+    const [publication, setPublication] = useState(initialPublication);
 
     useEffect(() => {
         if (pubTextAreaRef.current) {
@@ -599,6 +604,34 @@ export default function Show({ publication, authUser }) {
     // Saber si hay más respuestas para mostrar
     const hasMore = (publication.responses || []).length > visibleCount;
 
+    const handleLike = async (publicationId) => {
+        try {
+            const res = await fetch(`/publications/${publicationId}/like`, {
+                method: "POST",
+                headers: {
+                    "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').getAttribute("content"),
+                    "X-Requested-With": "XMLHttpRequest",
+                    Accept: "application/json",
+                },
+            });
+            if (res.status === 419) {
+                window.location.reload();
+                return;
+            }
+            const data = await res.json();
+            // Actualiza el estado de la publicación (si usas useState)
+            setPublication((prev) => ({
+                ...prev,
+                likedByMe: data.liked,
+                likesCount: data.count,
+            }));
+        } catch (e) {
+            console.log(e);
+            
+            Swal.fire("Error", "No se pudo actualizar el Me gusta.", "error");
+        }
+    };
+
     return (
         <AuthenticatedLayout
             user={authUser}
@@ -621,9 +654,7 @@ export default function Show({ publication, authUser }) {
                                 />
                             ) : (
                                 <div className="w-10 h-10 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-sm text-gray-700 dark:text-gray-300">
-                                    {publication.user.name
-                                        .charAt(0)
-                                        .toUpperCase()}
+                                    {publication.user.name.charAt(0).toUpperCase()}
                                 </div>
                             )}
                         </div>
@@ -643,10 +674,10 @@ export default function Show({ publication, authUser }) {
                             )}
                             <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
                                 Publicado el{" "}
-                                {new Date(
-                                    publication.created_at
-                                ).toLocaleDateString()}
+                                {new Date(publication.created_at).toLocaleDateString()}
                             </p>
+                            {/* Aquí van los botones de like y compartir */}
+                            <PublicationActions publication={publication} onLike={handleLike} />
                         </div>
                     </div>
                 </div>
