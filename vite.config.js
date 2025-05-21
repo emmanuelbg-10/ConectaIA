@@ -15,18 +15,4 @@ export default defineConfig({
             "@": "/resources/js",
         },
     },
-    server: {
-        host: "0.0.0.0",
-        port: 5173,
-        strictPort: true,
-        cors: true, // <- habilita CORS
-        headers: {
-            "Access-Control-Allow-Origin": "*", // <- permite cualquier origen
-        },
-        hmr: {
-            host: "192.168.0.20",
-            protocol: "http",
-            port: 5173,
-        },
-    },
 });
