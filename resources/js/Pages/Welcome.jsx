@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
-import { usePage, Head, Link } from "@inertiajs/react";
-import { router } from "@inertiajs/react";
+import { usePage, Head, Link, router } from "@inertiajs/react";
 import GuestLayout from "@/Layouts/GuestLayout";
 import PrimaryButton from "@/Components/PrimaryButton";
 import Loader from "@/Components/Loader";
@@ -10,14 +9,15 @@ export default function Welcome() {
     const [checkingAuth, setCheckingAuth] = useState(true);
 
     useEffect(() => {
-        if (auth?.user) {
-            router.visit("/publications");
-        } else {
-            const timeout = setTimeout(() => {
+        // Evita redireccionar hasta que esté montado todo
+        const timeout = setTimeout(() => {
+            if (auth?.user) {
+                router.visit("/publications");
+            } else {
                 setCheckingAuth(false);
-            }, 300);
-            return () => clearTimeout(timeout);
-        }
+            }
+        }, 100);
+        return () => clearTimeout(timeout);
     }, [auth]);
 
     if (checkingAuth) {

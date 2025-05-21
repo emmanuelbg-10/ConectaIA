@@ -71,7 +71,7 @@ export default function ModalSearch({
                 </div>
 
                 {/* Search Input and Type Selector */}
-                <div className="flex gap-2 mb-4">
+                <div className="flex flex-col md:flex-row gap-2 mb-4">
                     <input
                         type="text"
                         className="flex-1 px-4 py-2 border border-gray-300 dark:text-black dark:border-gray-700 rounded-full focus:outline-none focus:ring-2 focus:ring-[#214478] dark:focus:ring-blue-600"
