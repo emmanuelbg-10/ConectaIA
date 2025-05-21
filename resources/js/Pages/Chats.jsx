@@ -43,7 +43,14 @@ export default function ChatList() {
         ></ChatWindow>
       }
       {!selectedChat &&
-        <ActiveChats friends={friends} onChatSelect={handleChatSelect}></ActiveChats>
+        <div>
+          <div className="p-8 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-black">
+            <h2 className="text-xl font-bold text-[#214478] title">
+              Chats Privados
+            </h2>
+            </div>
+            <ActiveChats friends={friends} onChatSelect={handleChatSelect}></ActiveChats>
+        </div>
       }
     </AuthenticatedLayout>
   )
