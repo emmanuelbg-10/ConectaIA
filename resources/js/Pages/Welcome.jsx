@@ -27,13 +27,15 @@ export default function Welcome() {
     return (
         <GuestLayout>
             <Head title="Welcome" />
-            <div className="grid grid-cols-1 justify-self-center gap-5">
-                <PrimaryButton>
-                    <Link href={route("register")}>Registro</Link>
-                </PrimaryButton>
-                <PrimaryButton>
-                    <Link href={route("login")}>Iniciar sesión</Link>
-                </PrimaryButton>
+            <div className="max-w-xs mx-auto grid grid-cols-1 gap-4 w-full">
+                <Link href={route("register")}>
+                    <PrimaryButton className="w-full">Registro</PrimaryButton>
+                </Link>
+                <Link href={route("login")}>
+                    <PrimaryButton className="w-full">
+                        Iniciar sesión
+                    </PrimaryButton>
+                </Link>
             </div>
         </GuestLayout>
     );
