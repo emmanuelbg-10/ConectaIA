@@ -26,6 +26,9 @@ Route::post('/broadcasting/auth', function (Request $request) {
 
 // Página de bienvenida
 Route::get('/', function () {
+    if (Auth::check()) {
+        return redirect()->route('dashboard');
+    }
     return Inertia::render('Welcome', [
         'canLogin' => Route::has('login'),
         'canRegister' => Route::has('register'),
