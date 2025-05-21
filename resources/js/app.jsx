@@ -5,8 +5,7 @@ import { createInertiaApp } from "@inertiajs/react";
 import { resolvePageComponent } from "laravel-vite-plugin/inertia-helpers";
 import { createRoot } from "react-dom/client";
 import { InertiaProgress } from "@inertiajs/progress";
-import Background from './Components/Background';
-import GuestLayout from "./Layouts/GuestLayout";
+import Background from "./Components/Background";
 
 const appName = import.meta.env.VITE_APP_NAME || "Laravel";
 
@@ -19,7 +18,9 @@ createInertiaApp({
         ),
     setup({ el, App, props }) {
         const root = createRoot(el);
-        const isGuest = props.initialPage?.component?.toLowerCase().includes('auth/') || props.initialPage?.component === 'Welcome';
+        const isGuest =
+            props.initialPage?.component?.toLowerCase().includes("auth/") ||
+            props.initialPage?.component === "Welcome";
         root.render(
             <>
                 {isGuest && <Background />}
@@ -27,14 +28,14 @@ createInertiaApp({
             </>
         );
     },
-    progress: {
-        color: "#4B5563",
-        showSpinner: true,
-    },
-});
+    //     progress: {
+    //         color: "#4B5563",
+    //         showSpinner: false,
+    //     },
+    // });
 
-// Inicializa la barra de progreso
-InertiaProgress.init({
-    color: "#4B5563",
-    showSpinner: true,
+    // // Inicializa la barra de progreso
+    // InertiaProgress.init({
+    //     color: "#4B5563",
+    //     showSpinner: true,
 });
