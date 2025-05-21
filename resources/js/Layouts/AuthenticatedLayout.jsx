@@ -132,7 +132,7 @@ export default function AuthenticatedLayout({ children }) {
                 />
                 {isMobileChat && (
                     <NavLink
-                        href={route("chat.index")}
+                        href={route("chats")}
                         icon={FiUsers}
                         label="People"
                     />
@@ -194,7 +194,7 @@ export default function AuthenticatedLayout({ children }) {
                         active={route().current("profile")}
                     />
                     <NavLink
-                        href={route("chat.index")}
+                        href={route("chats")}
                         icon={FiUsers}
                         label="People"
                     />

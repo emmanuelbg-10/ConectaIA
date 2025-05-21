@@ -26,6 +26,9 @@ Route::post('/broadcasting/auth', function (Request $request) {
 
 // Página de bienvenida
 Route::get('/', function () {
+    if (Auth::check()) {
+        return redirect()->route('dashboard');
+    }
     return Inertia::render('Welcome', [
         'canLogin' => Route::has('login'),
         'canRegister' => Route::has('register'),
@@ -89,7 +92,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 // Chat
-Route::get('/chat', [ChatController::class, 'index'])->name('chat.index');
+// Route::get('/chat', [ChatController::class, 'index'])->name('chat.index');
 
 // Moderación de texto
 Route::post('/moderate-text', [ModerationController::class, 'moderate'])
@@ -125,3 +128,11 @@ Route::get('/hashtags/search', function (Illuminate\Http\Request $request) {
         ->pluck('hashtag_text');
     return response()->json(['hashtags' => $hashtags]);
 });
+
+Route::get('chats', function () {
+    return Inertia::render('Chats', [
+        'auth' => [
+            'user' => Auth::user(),
+        ],
+    ]);
+})->name('chats');
