@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use Illuminate\Contracts\Auth\MustVerifyEmail; // Si usas verificación de email
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -173,7 +172,7 @@ class User extends Authenticatable // implements MustVerifyEmail (si aplica)
      * table 'followings'.
      */
     public function followers(): BelongsToMany
-    {
+    {        
         // Tabla pivote 'followings', FK del modelo relacionado 'follower_id', FK de este modelo 'followed_id'
         return $this->belongsToMany(User::class, 'followings', 'followed_id', 'follower_id')->withTimestamps();
     }
@@ -198,5 +197,11 @@ class User extends Authenticatable // implements MustVerifyEmail (si aplica)
     public function responses()
     {
         return $this->hasMany(\App\Models\Response::class);
+    }
+
+    public function friends()
+    {
+        return $this->belongsToMany(User::class, 'friendships', 'sender_id', 'receiver_id')
+            ->wherePivot('status', 'accepted');
     }
 }

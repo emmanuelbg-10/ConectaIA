@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Events\MessageSent;
+use App\Models\Message;
 
 /**
  * Class MessageController
@@ -68,14 +69,14 @@ class MessageController extends Controller
             'content' => 'required|string|max:1000',
         ]);
 
-        $message = \App\Models\Message::create([
+        $message = Message::create([
             'user_sender_id' => auth()->id(),
             'user_receiver_id' => $request->receiver_id,
             'content' => $request->content,
             'sent_at' => now(),
         ]);
 
-        event(new MessageSent($message));
+        broadcast(new MessageSent($message))->toOthers();
 
         return response()->json($message);
     }

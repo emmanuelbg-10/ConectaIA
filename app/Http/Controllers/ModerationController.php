@@ -93,4 +93,51 @@ EOT;
             ], 500);
         }
     }
+
+    public function suggestHashtags(Request $request)
+    {
+        $apiKey = env('GEMINI_API_KEY');
+        $text = $request->input('text', '');
+
+        // 1. Obtener todos los hashtags actuales
+        $existingHashtags = \App\Models\Hashtag::pluck('hashtag_text')->toArray();
+        $existingList = implode(', ', $existingHashtags);
+
+        // 2. Prompt para sugerir hashtags considerando los existentes
+        $prompt = <<<EOT
+Eres un generador de hashtags para una red social. Analiza el siguiente texto y responde solo con una lista de hasta 5 hashtags relevantes, separados por comas, sin el símbolo # y sin explicar nada más.
+
+Si alguno de los siguientes hashtags existentes es relevante, reutilízalo. Si no, puedes sugerir nuevos.
+
+Hashtags existentes:
+$existingList
+
+Texto:
+"$text"
+EOT;
+
+        $response = \Illuminate\Support\Facades\Http::withHeaders([
+            'Content-Type' => 'application/json',
+        ])->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=$apiKey", [
+            'contents' => [
+                [
+                    'parts' => [
+                        ['text' => $prompt],
+                    ],
+                ],
+            ],
+        ]);
+
+        if ($response->successful()) {
+            $responseData = $response->json();
+            $hashtagsText = $responseData['candidates'][0]['content']['parts'][0]['text'] ?? '';
+            $hashtags = array_filter(array_map('trim', explode(',', $hashtagsText)));
+            return response()->json(['hashtags' => $hashtags]);
+        } else {
+            return response()->json([
+                'hashtags' => [],
+                'message' => 'Error al sugerir hashtags.',
+            ], 500);
+        }
+    }
 }

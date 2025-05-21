@@ -27,13 +27,32 @@ class HandleInertiaRequests extends Middleware
      *
      * @return array<string, mixed>
      */
-  public function share(Request $request)
-{
-    return array_merge(parent::share($request), [
-        'flash' => [
-            'success' => fn () => $request->session()->get('success'),
-            'newPublication' => fn () => $request->session()->get('newPublication')
-        ],
-    ]);
-}
+    public function share(Request $request)
+    {
+        $user = $request->user();
+    
+        $friends = collect();
+    
+        if ($user) {
+            $friends = \App\Models\User::whereIn('id', function($query) use ($user) {
+                    $query->select('receiver_id')
+                        ->from('friendships')
+                        ->where('sender_id', $user->id)
+                        ->where('status', 'accepted');
+                })
+                ->orWhereIn('id', function($query) use ($user) {
+                    $query->select('sender_id')
+                        ->from('friendships')
+                        ->where('receiver_id', $user->id)
+                        ->where('status', 'accepted');
+                })
+                ->get(['id', 'name', 'avatarURL']);
+        }
+    
+        return array_merge(parent::share($request), [
+            'auth'    => ['user' => $user],
+            'friends' => $friends,
+        ]);
+    }
+    
 }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Echo from "laravel-echo";
 import Pusher from "pusher-js";
 
@@ -19,23 +19,24 @@ const ChatWindow = ({
     setMessages,
 }) => {
     const [newMessage, setNewMessage] = useState("");
+    const messagesEndRef = useRef(null);
 
     // Si no hay un chat seleccionado, no renderiza nada
     if (!selectedChat) return null;
 
-    // Refresca los mensajes cada 2 segundos
-    useEffect(() => {
-        if (!selectedChat) return;
-        const interval = setInterval(async () => {
-            const res = await fetch(`/messages/${selectedChat.id}`);
-            if (res.ok) {
-                const msgs = await res.json();
-                setMessages(msgs);
-            }
-        }, 2000);
+    // // Refresca los mensajes cada 2 segundos
+    // useEffect(() => {
+    //     if (!selectedChat) return;
+    //     const interval = setInterval(async () => {
+    //         const res = await fetch(`/messages/${selectedChat.id}`);
+    //         if (res.ok) {
+    //             const msgs = await res.json();
+    //             setMessages(msgs);
+    //         }
+    //     }, 2000);
 
-        return () => clearInterval(interval);
-    }, [selectedChat, setMessages]);
+    //     return () => clearInterval(interval);
+    // }, [selectedChat, setMessages]);
 
     // Función para enviar el mensaje
     const handleSend = async () => {
@@ -57,20 +58,22 @@ const ChatWindow = ({
         });
 
         if (res.ok) {
-            const msg = await res.json();
-            setMessages((prev) => [...prev, msg]);
             setNewMessage("");
+            // No agregues el mensaje aquí, lo recibirás por el evento
         }
     };
 
     useEffect(() => {
         if (!selectedChat) return;
 
-        console.log("Suscribiendo a:", `chat.${currentUserId}`);
+        const ids = [currentUserId, selectedChat.id].sort();
+        const channelName = `chat.${ids[0]}.${ids[1]}`;
+
+        console.log("Suscribiendo a:", channelName);
         console.log("currentUserId en ChatWindow:", currentUserId);
 
-        window.Echo.channel(`chat.${currentUserId}`).listen(
-            "MessageSent",
+        window.Echo.channel(channelName).listen(
+            ".MessageSent",
             (e) => {
                 console.log("Evento recibido:", e);
                 setMessages((prev) => [...prev, e.message]);
@@ -78,9 +81,16 @@ const ChatWindow = ({
         );
 
         return () => {
-            window.Echo.leave(`chat.${currentUserId}`);
+            window.Echo.leave(channelName);
         };
     }, [selectedChat, currentUserId]);
+
+    // Scroll automático al último mensaje
+    useEffect(() => {
+        if (messagesEndRef.current) {
+            messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+        }
+    }, [messages, selectedChat]);
 
     return (
         <div className="flex flex-col h-full bg-white dark:bg-black">
@@ -125,7 +135,7 @@ const ChatWindow = ({
 
             {/* Mensajes */}
             <div className="flex-1 p-4 overflow-y-auto text-gray-700 dark:text-gray-200 space-y-2">
-                {[...messages].reverse().map((message) => (
+                {messages.map((message) => (
                     <div
                         key={message.id}
                         className={`flex ${
@@ -164,6 +174,8 @@ const ChatWindow = ({
                         </div>
                     </div>
                 ))}
+                {/* Este div invisible es el ancla para el scroll */}
+                <div ref={messagesEndRef} />
             </div>
 
             {/* Input para mensaje (sticky) */}
