@@ -77,6 +77,11 @@ export default function AuthenticatedLayout({ children, imageURL }) {
         setMessages(data);
     };
 
+    const handleShowImageModal = (imageURL) => {
+        setShowImage(null);
+        setTimeout(() => setShowImage(imageURL), 0);
+    };
+
     if (!authUser) {
         return (
             <div className="flex items-center justify-center h-screen bg-white dark:bg-black text-gray-500">
@@ -157,6 +162,7 @@ export default function AuthenticatedLayout({ children, imageURL }) {
                                 setMessages={setMessages}
                                 currentUserId={authUser.id}
                                 onClose={() => setSelectedChat(null)}
+                                onShowImageModal={handleShowImageModal}
                             />
                         </div>
                     ) : (
