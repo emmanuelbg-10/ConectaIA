@@ -342,11 +342,19 @@ export default function Show({ publication: initialPublication, authUser }) {
     // Estado para la publicación (para manejar el "me gusta")
     const [publication, setPublication] = useState(initialPublication);
 
+
+    const [showImageModal, setShowImageModal] = useState(null);
+
     useEffect(() => {
         if (pubTextAreaRef.current) {
             pubTextAreaRef.current.focus();
         }
     }, []);
+
+    const handleImageClick = (imageURL) => {
+        setShowImageModal(null);
+        setTimeout(() => setShowImageModal(imageURL), 0);
+    };
 
     const onEditClick = (id, text) => {
         setEditingId(id);
@@ -643,6 +651,7 @@ export default function Show({ publication: initialPublication, authUser }) {
     return (
         <AuthenticatedLayout
             user={authUser}
+            imageURL={showImageModal}
             header={
                 <h2 className="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
                     Publicación
@@ -680,6 +689,7 @@ export default function Show({ publication: initialPublication, authUser }) {
                                     src={publication.imageURL}
                                     alt=""
                                     className="mt-4 rounded-md max-h-96 w-full object-cover"
+                                    onClick={() => handleImageClick(publication.imageURL)}
                                 />
                             )}
                             <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
