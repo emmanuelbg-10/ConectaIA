@@ -341,6 +341,7 @@ export default function Show({ publication: initialPublication, authUser }) {
 
     // Estado para la publicación (para manejar el "me gusta")
     const [publication, setPublication] = useState(initialPublication);
+    const [showImageModal, setShowImageModal] = useState(null);
 
     useEffect(() => {
         if (pubTextAreaRef.current) {
@@ -679,7 +680,14 @@ export default function Show({ publication: initialPublication, authUser }) {
                                 <img
                                     src={publication.imageURL}
                                     alt=""
-                                    className="mt-4 rounded-md max-h-96 w-full object-cover"
+                                    className="mt-4 rounded-md max-h-96 w-full object-cover cursor-pointer"
+                                    onClick={() => {
+                                        setShowImageModal(null);
+                                        setTimeout(
+                                            () => setShowImageModal(publication.imageURL),
+                                            0
+                                        );
+                                    }}
                                 />
                             )}
                             <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
@@ -760,6 +768,14 @@ export default function Show({ publication: initialPublication, authUser }) {
                     )}
                 </div>
             </div>
+
+            {/* Al final del render, agrega el modal de imagen */}
+            {showImageModal && (
+                <AuthenticatedLayout
+                    user={authUser}
+                    imageURL={showImageModal}
+                />
+            )}
         </AuthenticatedLayout>
     );
 }
