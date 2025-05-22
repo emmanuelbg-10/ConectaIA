@@ -768,14 +768,6 @@ export default function Show({ publication: initialPublication, authUser }) {
                     )}
                 </div>
             </div>
-
-            {/* Al final del render, agrega el modal de imagen */}
-            {showImageModal && (
-                <AuthenticatedLayout
-                    user={authUser}
-                    imageURL={showImageModal}
-                />
-            )}
         </AuthenticatedLayout>
     );
 }
