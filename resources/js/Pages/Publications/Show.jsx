@@ -341,8 +341,6 @@ export default function Show({ publication: initialPublication, authUser }) {
 
     // Estado para la publicación (para manejar el "me gusta")
     const [publication, setPublication] = useState(initialPublication);
-
-
     const [showImageModal, setShowImageModal] = useState(null);
 
     useEffect(() => {
@@ -770,6 +768,14 @@ export default function Show({ publication: initialPublication, authUser }) {
                     )}
                 </div>
             </div>
+
+            {/* Al final del render, agrega el modal de imagen */}
+            {showImageModal && (
+                <AuthenticatedLayout
+                    user={authUser}
+                    imageURL={showImageModal}
+                />
+            )}
         </AuthenticatedLayout>
     );
 }
