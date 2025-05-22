@@ -26,6 +26,9 @@ Route::post('/broadcasting/auth', function (Request $request) {
 
 // Página de bienvenida
 Route::get('/', function () {
+    if (Auth::check()) {
+        return redirect()->route('dashboard');
+    }
     return Inertia::render('Welcome', [
         'canLogin' => Route::has('login'),
         'canRegister' => Route::has('register'),
@@ -39,7 +42,6 @@ Route::get('/dashboard', function () {
     return Inertia::render('Dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
 
-// Perfil de usuario (con controlador sería mejor a futuro)
 Route::get('/profile', function () {
     return Inertia::render('Profile', [
         'auth' => [
@@ -88,8 +90,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('/responses/{response}', [ResponseController::class, 'destroy'])->name('responses.destroy');
 });
 
-// Chat
-Route::get('/chat', [ChatController::class, 'index'])->name('chat.index');
 
 // Moderación de texto
 Route::post('/moderate-text', [ModerationController::class, 'moderate'])
@@ -125,3 +125,11 @@ Route::get('/hashtags/search', function (Illuminate\Http\Request $request) {
         ->pluck('hashtag_text');
     return response()->json(['hashtags' => $hashtags]);
 });
+
+Route::get('chats', function () {
+    return Inertia::render('Chats', [
+        'auth' => [
+            'user' => Auth::user(),
+        ],
+    ]);
+})->name('chats');

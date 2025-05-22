@@ -1,14 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
-import { FaSearch, FaUser, FaClipboard, FaTimes } from "react-icons/fa";
+import { FaSearch, FaClipboard, FaTimes } from "react-icons/fa";
 import FriendButton from "@/Components/FriendButton";
 import FollowButton from "@/Components/FollowButton";
 
-export default function ModalSearch({
-    open,
-    onClose,
-    authUser,
-    onPublicationSelect = () => {},
-}) {
+export default function ModalSearch({ open, onClose }) {
     const [query, setQuery] = useState("");
     const [type, setType] = useState("users"); // "users" o "publications"
     const [results, setResults] = useState([]);
@@ -71,7 +66,7 @@ export default function ModalSearch({
                 </div>
 
                 {/* Search Input and Type Selector */}
-                <div className="flex gap-2 mb-4">
+                <div className="flex flex-col md:flex-row gap-2 mb-4">
                     <input
                         type="text"
                         className="flex-1 px-4 py-2 border border-gray-300 dark:text-black dark:border-gray-700 rounded-full focus:outline-none focus:ring-2 focus:ring-[#214478] dark:focus:ring-blue-600"
