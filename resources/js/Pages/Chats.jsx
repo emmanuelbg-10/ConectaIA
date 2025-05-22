@@ -32,28 +32,30 @@ export default function ChatList() {
 
     return (
         <AuthenticatedLayout>
-            {selectedChat && (
-                <ChatWindow
-                    selectedChat={selectedChat}
-                    messages={messages}
-                    currentUserId={authUser.id}
-                    setMessages={setMessages}
-                    onClose={() => setSelectedChat(null)}
-                ></ChatWindow>
-            )}
-            {!selectedChat && (
-                <div>
-                    <div className="p-8 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-black">
-                        <h2 className="text-xl font-bold text-[#214478] title">
-                            Chats Privados
-                        </h2>
+            <div className="-m-4">
+                {selectedChat && (
+                    <ChatWindow
+                        selectedChat={selectedChat}
+                        messages={messages}
+                        currentUserId={authUser.id}
+                        setMessages={setMessages}
+                        onClose={() => setSelectedChat(null)}
+                    ></ChatWindow>
+                )}
+                {!selectedChat && (
+                    <div>
+                        <div className="p-8 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-black">
+                            <h2 className="text-xl font-bold text-[#214478] title">
+                                Chats Privados
+                            </h2>
+                        </div>
+                        <ActiveChats
+                            friends={friends}
+                            onChatSelect={handleChatSelect}
+                        ></ActiveChats>
                     </div>
-                    <ActiveChats
-                        friends={friends}
-                        onChatSelect={handleChatSelect}
-                    ></ActiveChats>
-                </div>
-            )}
+                )}
+            </div>
         </AuthenticatedLayout>
     );
 }

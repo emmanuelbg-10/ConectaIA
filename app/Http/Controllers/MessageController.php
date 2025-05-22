@@ -33,31 +33,34 @@ class MessageController extends Controller
         $request->validate([
             'receiver_id' => 'required|exists:users,id',
             'content' => 'nullable|string|max:1000',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:4096',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp',
         ]);
     
         $imageUrl = null;
-    
+
+        // Subir imagen si existe
         if ($request->hasFile('image')) {
             $uploadedFile = $request->file('image');
             $base64Image = 'data:' . $uploadedFile->getMimeType() . ';base64,' . base64_encode($uploadedFile->getContent());
-    
+        
             $uploaded = Cloudinary::uploadApi()->upload($base64Image, [
                 'folder' => 'messages',
                 'resource_type' => 'image',
             ]);
-    
+        
             $imageUrl = $uploaded['secure_url'];
         }
-    
-        if (!$request->content && !$imageUrl) {
+        
+        // Validar que al menos uno exista
+        if (empty($request->content) && empty($imageUrl)) {
             return response()->json(['error' => 'No se puede enviar un mensaje vacío.'], 422);
         }
+        
     
         $message = Message::create([
             'user_sender_id' => auth()->id(),
             'user_receiver_id' => $request->receiver_id,
-            'content' => $request->content,
+            'content' => $request->input('content', null),
             'imageURL' => $imageUrl,
             'sent_at' => now(),
         ]);

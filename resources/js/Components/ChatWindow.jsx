@@ -97,7 +97,6 @@ const ChatWindow = ({
         };
     }, []);
 
-    // Mantener el scroll al fondo en <= 768px, corrige para 767 y resize
     useEffect(() => {
         const scrollToBottom = () => {
             if (messagesEndRef.current && window.innerWidth <= 768) {
@@ -194,15 +193,23 @@ const ChatWindow = ({
             {/* Input Area: Asegura que el input area tenga una altura fija */}
             <div className="flex-shrink-0 bg-white/80 dark:bg-black/80 backdrop-blur-md border-t border-gray-200 dark:border-gray-700 px-4 pt-3 pb-4">
                 {selectedImage && (
-                    <div className="mb-3 relative w-full group">
-                        <img
-                            src={URL.createObjectURL(selectedImage)}
-                            alt="Previsualización"
-                            className="rounded-xl w-full object-cover shadow-md max-h-40 sm:max-h-56 md:max-h-72 lg:max-h-80 transition-transform group-hover:scale-[1.02]"
-                        />
+                    <div className="mb-3 relative w-full">
+                        {/* Contenedor con max-width igual a los mensajes */}
+                        <div className="max-w-[70%] mx-auto">
+                            <img
+                                src={URL.createObjectURL(selectedImage)}
+                                alt="Previsualización"
+                                className="rounded-xl mx-auto max-w-[70%] h-auto shadow-md max-h-40 sm:max-h-56 md:max-h-72 lg:max-h-80 transition-transform group-hover:scale-[1.02]"
+                            />
+                        </div>
                         <button
-                            onClick={() => setSelectedImage(null)}
-                            className="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1.5 hover:bg-black transition-colors duration-200"
+                            onClick={() => {
+                                setSelectedImage(null);
+                                if (fileInputRef.current) {
+                                    fileInputRef.current.value = null;
+                                }
+                            }}
+                            className="absolute top-2 right-2 bg-black/60 dark:bg-gray-800/80 text-white rounded-full p-1.5 hover:bg-black dark:hover:bg-gray-900 transition-colors duration-200"
                             aria-label="Eliminar imagen"
                         >
                             <FiX className="w-4 h-4" />
