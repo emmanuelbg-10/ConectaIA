@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Events\MessageSent;
 use App\Models\Message;
+use CloudinaryLabs\CloudinaryLaravel\Facades\Cloudinary;
+
 
 class MessageController extends Controller
 {
@@ -30,18 +32,38 @@ class MessageController extends Controller
     {
         $request->validate([
             'receiver_id' => 'required|exists:users,id',
-            'content' => 'required|string|max:1000',
+            'content' => 'nullable|string|max:1000',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:4096',
         ]);
-
+    
+        $imageUrl = null;
+    
+        if ($request->hasFile('image')) {
+            $uploadedFile = $request->file('image');
+            $base64Image = 'data:' . $uploadedFile->getMimeType() . ';base64,' . base64_encode($uploadedFile->getContent());
+    
+            $uploaded = Cloudinary::uploadApi()->upload($base64Image, [
+                'folder' => 'messages',
+                'resource_type' => 'image',
+            ]);
+    
+            $imageUrl = $uploaded['secure_url'];
+        }
+    
+        if (!$request->content && !$imageUrl) {
+            return response()->json(['error' => 'No se puede enviar un mensaje vacío.'], 422);
+        }
+    
         $message = Message::create([
             'user_sender_id' => auth()->id(),
             'user_receiver_id' => $request->receiver_id,
             'content' => $request->content,
+            'imageURL' => $imageUrl,
             'sent_at' => now(),
         ]);
-
+    
         broadcast(new MessageSent($message))->toOthers();
-
+    
         return response()->json($message);
     }
 }

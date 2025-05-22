@@ -42,7 +42,6 @@ Route::get('/dashboard', function () {
     return Inertia::render('Dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
 
-// Perfil de usuario (con controlador sería mejor a futuro)
 Route::get('/profile', function () {
     return Inertia::render('Profile', [
         'auth' => [
@@ -91,8 +90,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('/responses/{response}', [ResponseController::class, 'destroy'])->name('responses.destroy');
 });
 
-// Chat
-// Route::get('/chat', [ChatController::class, 'index'])->name('chat.index');
 
 // Moderación de texto
 Route::post('/moderate-text', [ModerationController::class, 'moderate'])
