@@ -105,7 +105,7 @@ export default function Login({ status, canResetPassword }) {
                     ¿No tienes una cuenta?{" "}
                     <Link
                         href={route("register")}
-                        className="underline text-[#214478]  hover:text-blue-600"
+                        className="underline text-[#214478] dark:text-blue-700  hover:text-blue-600"
                     >
                         Regístrate
                     </Link>
