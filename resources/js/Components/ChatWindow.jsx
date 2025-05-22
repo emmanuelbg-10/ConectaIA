@@ -22,12 +22,19 @@ const ChatWindow = ({
     currentUserId,
     onClose,
     setMessages,
+    onShowImageModal
 }) => {
     const [newMessage, setNewMessage] = useState("");
     const [selectedImage, setSelectedImage] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
     const messagesEndRef = useRef(null);
     const fileInputRef = useRef(null);
+
+    const handleImageClick = (imageURL) => {
+        if (onShowImageModal) {
+            onShowImageModal(imageURL);
+        }
+    };
 
     useEffect(() => {
         if (!selectedChat) return;
@@ -166,6 +173,7 @@ const ChatWindow = ({
                                         src={message.imageURL}
                                         alt="Adjunto"
                                         className="w-full h-auto rounded-lg max-h-40 sm:max-h-56 md:max-h-72 lg:max-h-80 transition-all duration-300"
+                                        onClick={() => handleImageClick(message.imageURL)}
                                     />
                                 </div>
                             )}
