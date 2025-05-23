@@ -1,5 +1,11 @@
 import React, { useEffect, useRef } from "react";
-import { FaUserPlus, FaEnvelope, FaUserFriends, FaTimes } from "react-icons/fa";
+import {
+    FaUserPlus,
+    FaEnvelope,
+    FaUserFriends,
+    FaTimes,
+    FaPaperclip,
+} from "react-icons/fa";
 
 export default function ModalAlerts({
     open,
@@ -130,7 +136,19 @@ export default function ModalAlerts({
                                     </span>
                                     :{" "}
                                     <span className="break-words">
-                                        {msg.content}
+                                        {msg.content &&
+                                        msg.content.trim() !== "" ? (
+                                            msg.content
+                                        ) : (
+                                            <>
+                                                <span className="inline-block align-middle mr-1 text-gray-500 dark:text-gray-400">
+                                                    <FaPaperclip />
+                                                </span>
+                                                <span className="italic text-gray-500 dark:text-gray-400">
+                                                    Foto adjunta
+                                                </span>
+                                            </>
+                                        )}
                                     </span>
                                 </li>
                             ))}
