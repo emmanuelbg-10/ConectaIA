@@ -151,6 +151,15 @@ export default function ModalSearch({ open, onClose }) {
                                 </p>
                             </div>
                         ))}
+
+                    {/* Mensaje si no hay resultados */}
+                    {!loading &&
+                        results.length === 0 &&
+                        query.trim() !== "" && (
+                            <div className="text-center text-gray-500 dark:text-gray-400 mt-4">
+                                No se encontraron resultados para tu búsqueda.
+                            </div>
+                        )}
                 </div>
             </div>
         </div>

@@ -27,7 +27,7 @@ Route::post('/broadcasting/auth', function (Request $request) {
 // Página de bienvenida
 Route::get('/', function () {
     if (Auth::check()) {
-        return redirect()->route('dashboard');
+        return redirect()->route('publications.index');
     }
     return Inertia::render('Welcome', [
         'canLogin' => Route::has('login'),
@@ -36,11 +36,6 @@ Route::get('/', function () {
         'phpVersion' => PHP_VERSION,
     ]);
 });
-
-// Dashboard
-Route::get('/dashboard', function () {
-    return Inertia::render('Dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::get('/profile', function () {
     return Inertia::render('Profile', [
@@ -120,7 +115,7 @@ Route::get('/search', [\App\Http\Controllers\SearchController::class, 'search'])
 Route::post('/hashtags/suggest', [\App\Http\Controllers\ModerationController::class, 'suggestHashtags']);
 Route::get('/hashtags/search', function (Illuminate\Http\Request $request) {
     $q = $request->query('q', '');
-    $hashtags = \App\Models\Hashtag::where('hashtag_text', 'like', $q . '%')
+    $hashtags = \App\Models\Hashtag::where('hashtag_text', 'like', '%' . $q . '%')
         ->limit(10)
         ->pluck('hashtag_text');
     return response()->json(['hashtags' => $hashtags]);
