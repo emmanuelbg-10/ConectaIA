@@ -15,13 +15,16 @@ import ChatSidebar from "@/Components/ChatSidebar";
 import ChatWindow from "@/Components/ChatWindow";
 import ModalAlerts from "@/Components/ModalAlerts";
 import ModalSearch from "@/Components/ModalSearch";
+import ModalImage from "@/Components/ModalImage";
 
-export default function AuthenticatedLayout({ children }) {
+export default function AuthenticatedLayout({ children, imageURL }) {
+
     const [windowWidth, setWindowWidth] = useState(window.innerWidth);
     const isMobileChat = windowWidth < 1200;
     const [selectedChat, setSelectedChat] = useState(null);
     const [messages, setMessages] = useState([]);
     const [showAlerts, setShowAlerts] = useState(false);
+    const [showImage, setShowImage] = useState(imageURL);
     const [alertsData, setAlertsData] = useState({
         recentMessages: [],
         recentFollowers: [],
@@ -57,6 +60,11 @@ export default function AuthenticatedLayout({ children }) {
             });
     }, []);
 
+    // Sincroniza showImage con imageURL si cambia el prop
+    useEffect(() => {
+        setShowImage(imageURL);
+    }, [imageURL]);
+
     const openAlerts = async () => {
         setShowAlerts(true);
         setHasNewAlerts(false);
@@ -67,6 +75,11 @@ export default function AuthenticatedLayout({ children }) {
         const res = await fetch(`/messages/${chat.id}`);
         const data = await res.json();
         setMessages(data);
+    };
+
+    const handleShowImageModal = (imageURL) => {
+        setShowImage(null);
+        setTimeout(() => setShowImage(imageURL), 0);
     };
 
     if (!authUser) {
@@ -149,6 +162,7 @@ export default function AuthenticatedLayout({ children }) {
                                 setMessages={setMessages}
                                 currentUserId={authUser.id}
                                 onClose={() => setSelectedChat(null)}
+                                onShowImageModal={handleShowImageModal}
                             />
                         </div>
                     ) : (
@@ -222,6 +236,13 @@ export default function AuthenticatedLayout({ children }) {
                 onClose={() => setShowSearch(false)}
                 authUser={authUser}
             />
+            {showImage && (
+                <ModalImage
+                    open={!!showImage}
+                    onClose={() => setShowImage(null)}
+                    imageURL={showImage}
+                />
+            )}
         </div>
     );
 }

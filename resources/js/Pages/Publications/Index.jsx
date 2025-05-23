@@ -55,6 +55,7 @@ export default function TwitterStyleFeed({
     const [hashtagQuery, setHashtagQuery] = useState([]);
     const [hashtagSuggestions, setHashtagSuggestions] = useState([]);
     const [highlightedIndex, setHighlightedIndex] = useState(-1);
+    const [showImageModal, setShowImageModal] = useState(null);
     const [isSuggestionOpen, setIsSuggestionOpen] = useState(false);
 
     const containerRef = useRef(null);
@@ -133,6 +134,11 @@ export default function TwitterStyleFeed({
             reader.onload = () => setData("preview", reader.result);
             reader.readAsDataURL(file);
         }
+    };
+
+    const handleImageClick = (imageURL) => {
+        setShowImageModal(null);
+        setTimeout(() => setShowImageModal(imageURL), 0);
     };
 
     const handleSubmit = async (e) => {
@@ -548,6 +554,7 @@ export default function TwitterStyleFeed({
         <AuthenticatedLayout
             authUser={authUser}
             followers={followers}
+            imageURL={showImageModal}
             header={
                 <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 z-10">
                     <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">
@@ -987,6 +994,11 @@ export default function TwitterStyleFeed({
                                                     src={publication.imageURL}
                                                     alt="Publicación"
                                                     className="w-full h-auto object-contain max-h-96 block"
+                                                    onClick={() =>
+                                                        handleImageClick(
+                                                            publication.imageURL
+                                                        )
+                                                    }
                                                 />
                                             </div>
                                         )}

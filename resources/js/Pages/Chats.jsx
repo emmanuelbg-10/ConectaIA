@@ -11,6 +11,13 @@ export default function ChatList() {
     const [selectedChat, setSelectedChat] = useState(null);
     const [messages, setMessages] = useState([]);
 
+    const [showImageModal, setShowImageModal] = useState(null);
+
+    const handleShowImageModal = (imageURL) => {
+        setShowImageModal(null);
+        setTimeout(() => setShowImageModal(imageURL), 0);
+    };
+
     const handleChatSelect = async (chat) => {
         setSelectedChat(chat);
         const res = await fetch(`/messages/${chat.id}`);
@@ -31,7 +38,9 @@ export default function ChatList() {
     }, []);
 
     return (
-        <AuthenticatedLayout>
+        <AuthenticatedLayout
+            imageURL={showImageModal}
+        >
             <div className="-m-4">
                 {selectedChat && (
                     <ChatWindow
@@ -40,6 +49,7 @@ export default function ChatList() {
                         currentUserId={authUser.id}
                         setMessages={setMessages}
                         onClose={() => setSelectedChat(null)}
+                        onShowImageModal={handleShowImageModal}
                     ></ChatWindow>
                 )}
                 {!selectedChat && (
