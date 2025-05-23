@@ -1,5 +1,11 @@
 import React, { useEffect, useRef } from "react";
-import { FaUserPlus, FaEnvelope, FaUserFriends, FaTimes } from "react-icons/fa";
+import {
+    FaUserPlus,
+    FaEnvelope,
+    FaUserFriends,
+    FaTimes,
+    FaPaperclip,
+} from "react-icons/fa";
 
 export default function ModalAlerts({
     open,
@@ -53,20 +59,27 @@ export default function ModalAlerts({
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 px-4 ">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 px-2 sm:px-4">
             <div
                 ref={modalRef}
-                className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-xl p-6 text-black dark:text-white relative"
+                className="
+                    bg-white dark:bg-gray-900 rounded-2xl shadow-2xl
+                    w-full max-w-xl sm:max-w-lg md:max-w-xl
+                    p-2 sm:p-4 md:p-6
+                    text-black dark:text-white relative
+                    max-h-[90vh] overflow-y-auto
+                "
+                style={{ wordBreak: "break-word" }}
             >
                 <button
                     onClick={onClose}
-                    className="absolute top-4 right-4 text-gray-500 hover:text-red-500 text-2xl"
+                    className="absolute top-2 right-2 sm:top-4 sm:right-4 text-gray-500 hover:text-red-500 text-2xl"
                     aria-label="Cerrar"
                 >
                     <FaTimes />
                 </button>
 
-                <h2 className="text-3xl font-bold mb-6 text-center text-[#214478] title dark:text-blue-800">
+                <h2 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6 text-center text-[#214478] title dark:text-blue-800">
                     Alertas
                 </h2>
 
@@ -78,15 +91,17 @@ export default function ModalAlerts({
                             {friendRequests.map((req) => (
                                 <li
                                     key={req.id}
-                                    className="bg-gray-100 dark:bg-gray-800 rounded-lg px-4 py-3 flex justify-between items-center"
+                                    className="bg-gray-100 dark:bg-gray-800 rounded-lg px-2 py-2 sm:px-4 sm:py-3 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2"
                                 >
-                                    <div>
-                                        <span className="font-bold text-[#214478] dark:text-blue-600">
+                                    <div className="flex-1 min-w-0">
+                                        <span className="font-bold text-[#214478] dark:text-blue-600 break-words">
                                             {req.sender.name}
                                         </span>{" "}
-                                        te ha enviado una petición.
+                                        <span className="break-words">
+                                            te ha enviado una petición.
+                                        </span>
                                     </div>
-                                    <div className="flex gap-2">
+                                    <div className="flex gap-2 flex-shrink-0">
                                         <button
                                             onClick={() => handleAccept(req.id)}
                                             className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white text-sm rounded-full"
@@ -114,12 +129,27 @@ export default function ModalAlerts({
                             {recentMessages.map((msg) => (
                                 <li
                                     key={msg.id}
-                                    className="bg-gray-100 dark:bg-gray-800 rounded-lg px-4 py-2"
+                                    className="bg-gray-100 dark:bg-gray-800 rounded-lg px-2 py-2 sm:px-4 sm:py-2 break-words"
                                 >
-                                    <span className="font-bold text-[#214478] dark:text-blue-600">
+                                    <span className="font-bold text-[#214478] dark:text-blue-600 break-words">
                                         {msg.sender.name}
                                     </span>
-                                    : {msg.content}
+                                    :{" "}
+                                    <span className="break-words">
+                                        {msg.content &&
+                                        msg.content.trim() !== "" ? (
+                                            msg.content
+                                        ) : (
+                                            <>
+                                                <span className="inline-block align-middle mr-1 text-gray-500 dark:text-gray-400">
+                                                    <FaPaperclip />
+                                                </span>
+                                                <span className="italic text-gray-500 dark:text-gray-400">
+                                                    Foto adjunta
+                                                </span>
+                                            </>
+                                        )}
+                                    </span>
                                 </li>
                             ))}
                         </ul>
@@ -134,12 +164,14 @@ export default function ModalAlerts({
                             {recentFollowers.map((follower) => (
                                 <li
                                     key={follower.id}
-                                    className="bg-gray-100 dark:bg-gray-800 rounded-lg px-4 py-2"
+                                    className="bg-gray-100 dark:bg-gray-800 rounded-lg px-2 py-2 sm:px-4 sm:py-2 break-words"
                                 >
-                                    <span className="font-bold text-[#214478] dark:text-blue-600">
+                                    <span className="font-bold text-[#214478] dark:text-blue-600 break-words">
                                         {follower.name}
                                     </span>{" "}
-                                    empezó a seguirte.
+                                    <span className="break-words">
+                                        empezó a seguirte.
+                                    </span>
                                 </li>
                             ))}
                         </ul>
@@ -152,8 +184,8 @@ export default function ModalAlerts({
 
 function Section({ title, icon, children }) {
     return (
-        <div className="mb-6">
-            <h3 className="text-lg font-semibold flex items-center gap-2 mb-3 text-[#214478]">
+        <div className="mb-4 sm:mb-6">
+            <h3 className="text-base sm:text-lg font-semibold flex items-center gap-2 mb-2 sm:mb-3 text-[#214478]">
                 {icon} {title}
             </h3>
             {children}
@@ -163,7 +195,7 @@ function Section({ title, icon, children }) {
 
 function EmptyState({ text }) {
     return (
-        <p className="text-gray-500 dark:text-gray-400 italic bg-gray-50 dark:bg-gray-800 px-4 py-3 rounded-md">
+        <p className="text-gray-500 dark:text-gray-400 italic bg-gray-50 dark:bg-gray-800 px-2 py-2 sm:px-4 sm:py-3 rounded-md break-words">
             {text}
         </p>
     );

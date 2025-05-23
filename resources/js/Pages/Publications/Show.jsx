@@ -110,7 +110,7 @@ function ResponseItem({
                         </div>
                     )}
                 </div>
-                
+
                 <div className="flex-1">
                     <div className="flex items-center justify-between">
                         <span className="font-semibold text-gray-800 dark:text-gray-200">
@@ -241,6 +241,7 @@ function ResponseItem({
                                     onSubmit={(e) =>
                                         handleReplySubmit(e, response.id)
                                     }
+                                    className="bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl p-4 shadow-sm transition-all"
                                 >
                                     <textarea
                                         ref={replyTextAreaRef}
@@ -248,7 +249,7 @@ function ResponseItem({
                                         onChange={(e) =>
                                             setReplyText(e.target.value)
                                         }
-                                        className="w-full border rounded p-2 text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-800"
+                                        className="w-full resize-none border border-gray-300 dark:border-gray-700 rounded-lg p-3 text-gray-800 dark:text-gray-200 bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-[#214478] focus:border-transparent transition-all"
                                         placeholder="Escribe una respuesta..."
                                         rows={3}
                                         onKeyDown={(e) =>
@@ -256,29 +257,34 @@ function ResponseItem({
                                         }
                                         onFocus={() => setIsReplyFocused(true)}
                                     />
-                                    <div className="flex gap-2 mt-2">
+                                    <div className="flex justify-end gap-3 mt-3">
+                                        <button
+                                            type="button"
+                                            onClick={() => onReplyClick(0)}
+                                            className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-all"
+                                        >
+                                            <FiX className="text-base" />{" "}
+                                            Cancelar
+                                        </button>
                                         <button
                                             type="submit"
                                             disabled={
                                                 processing || !replyText.trim()
                                             }
-                                            className="px-3 py-1 bg-[#214478] text-white rounded text-sm focus:outline-none hover:opacity-80 flex items-center"
+                                            className={`flex items-center gap-1 px-4 py-2 text-sm font-medium rounded-lg transition-all ${
+                                                processing || !replyText.trim()
+                                                    ? "bg-[#214478]/50 text-white cursor-not-allowed"
+                                                    : "bg-[#214478] hover:bg-[#1b365f] text-white"
+                                            }`}
                                         >
                                             {processing ? (
                                                 "Enviando..."
                                             ) : (
                                                 <>
-                                                    <FiSend className="mr-1" />{" "}
+                                                    <FiSend className="text-base" />{" "}
                                                     Responder
                                                 </>
                                             )}
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => onReplyClick(0)}
-                                            className="px-3 py-1 bg-gray-200 text-gray-700 rounded text-sm focus:outline-none hover:opacity-80 dark:bg-gray-700 dark:text-gray-300 flex items-center"
-                                        >
-                                            <FiX className="mr-1" /> Cancelar
                                         </button>
                                     </div>
                                 </form>
@@ -335,12 +341,18 @@ export default function Show({ publication: initialPublication, authUser }) {
 
     // Estado para la publicación (para manejar el "me gusta")
     const [publication, setPublication] = useState(initialPublication);
+    const [showImageModal, setShowImageModal] = useState(null);
 
     useEffect(() => {
         if (pubTextAreaRef.current) {
             pubTextAreaRef.current.focus();
         }
     }, []);
+
+    const handleImageClick = (imageURL) => {
+        setShowImageModal(null);
+        setTimeout(() => setShowImageModal(imageURL), 0);
+    };
 
     const onEditClick = (id, text) => {
         setEditingId(id);
@@ -609,7 +621,9 @@ export default function Show({ publication: initialPublication, authUser }) {
             const res = await fetch(`/publications/${publicationId}/like`, {
                 method: "POST",
                 headers: {
-                    "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').getAttribute("content"),
+                    "X-CSRF-TOKEN": document
+                        .querySelector('meta[name="csrf-token"]')
+                        .getAttribute("content"),
                     "X-Requested-With": "XMLHttpRequest",
                     Accept: "application/json",
                 },
@@ -627,7 +641,7 @@ export default function Show({ publication: initialPublication, authUser }) {
             }));
         } catch (e) {
             console.log(e);
-            
+
             Swal.fire("Error", "No se pudo actualizar el Me gusta.", "error");
         }
     };
@@ -635,6 +649,7 @@ export default function Show({ publication: initialPublication, authUser }) {
     return (
         <AuthenticatedLayout
             user={authUser}
+            imageURL={showImageModal}
             header={
                 <h2 className="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
                     Publicación
@@ -654,7 +669,9 @@ export default function Show({ publication: initialPublication, authUser }) {
                                 />
                             ) : (
                                 <div className="w-10 h-10 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-sm text-gray-700 dark:text-gray-300">
-                                    {publication.user.name.charAt(0).toUpperCase()}
+                                    {publication.user.name
+                                        .charAt(0)
+                                        .toUpperCase()}
                                 </div>
                             )}
                         </div>
@@ -670,14 +687,20 @@ export default function Show({ publication: initialPublication, authUser }) {
                                     src={publication.imageURL}
                                     alt=""
                                     className="mt-4 rounded-md max-h-96 w-full object-cover"
+                                    onClick={() => handleImageClick(publication.imageURL)}
                                 />
                             )}
                             <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
                                 Publicado el{" "}
-                                {new Date(publication.created_at).toLocaleDateString()}
+                                {new Date(
+                                    publication.created_at
+                                ).toLocaleDateString()}
                             </p>
                             {/* Aquí van los botones de like y compartir */}
-                            <PublicationActions publication={publication} onLike={handleLike} />
+                            <PublicationActions
+                                publication={publication}
+                                onLike={handleLike}
+                            />
                         </div>
                     </div>
                 </div>
@@ -709,13 +732,6 @@ export default function Show({ publication: initialPublication, authUser }) {
                             </>
                         )}
                     </button>
-                    <Link
-                        href={route("publications.index")}
-                        className="px-3 py-2 bg-gray-200 text-gray-700 rounded hover:opacity-80 dark:bg-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus-ring-offset-2 flex items-center"
-                    >
-                        <FiArrowLeft className="h-5 w-5 inline-block align-middle mr-1" />
-                        Volver
-                    </Link>
                 </form>
 
                 <div className="bg-white dark:bg-gray-800 rounded-md shadow-md p-6">

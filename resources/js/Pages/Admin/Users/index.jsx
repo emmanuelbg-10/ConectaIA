@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout"; // O tu layout de admin si tienes uno
-import { Head, usePage, useForm } from "@inertiajs/react";
+import { Head, useForm } from "@inertiajs/react";
 import Pagination from "@/Components/Pagination"; // Un componente de paginación reutilizable
 import PrimaryButton from "@/Components/PrimaryButton";
 import DangerButton from "@/Components/DangerButton";

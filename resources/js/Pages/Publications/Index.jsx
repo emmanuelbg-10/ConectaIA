@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import { Head, useForm } from "@inertiajs/react";
 import { Inertia } from "@inertiajs/inertia";
@@ -55,6 +55,26 @@ export default function TwitterStyleFeed({
     const [hashtagQuery, setHashtagQuery] = useState([]);
     const [hashtagSuggestions, setHashtagSuggestions] = useState([]);
     const [highlightedIndex, setHighlightedIndex] = useState(-1);
+    const [showImageModal, setShowImageModal] = useState(null);
+    const [isSuggestionOpen, setIsSuggestionOpen] = useState(false);
+
+    const containerRef = useRef(null);
+
+    useEffect(() => {
+        function handleClickOutside(event) {
+            if (
+                containerRef.current &&
+                !containerRef.current.contains(event.target)
+            ) {
+                setIsSuggestionOpen(false);
+            }
+        }
+
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, []);
 
     useEffect(() => {
         setPublications(
@@ -114,6 +134,11 @@ export default function TwitterStyleFeed({
             reader.onload = () => setData("preview", reader.result);
             reader.readAsDataURL(file);
         }
+    };
+
+    const handleImageClick = (imageURL) => {
+        setShowImageModal(null);
+        setTimeout(() => setShowImageModal(imageURL), 0);
     };
 
     const handleSubmit = async (e) => {
@@ -198,24 +223,69 @@ export default function TwitterStyleFeed({
         if (suggestedHashtags.length > 0) {
             let manualHashtags = [];
             let htmlContent = () => `
-                <div style="text-align:left;" id="hashtags-modal-content">
-                    ${suggestedHashtags
-                        .map(
-                            (tag, i) =>
-                                `<label style="display:block;">
-                                    <input type="checkbox" value="${tag}" id="hashtag_${i}" checked />
-                                    #${tag}
-                                </label>`
-                        )
-                        .join("")}
-                    <div style="margin-top:10px;">
-                        <input type="text" id="manualHashtagInput" placeholder="Añadir hashtag manual" style="width:70%;" maxlength="30"/>
-                        <button type="button" id="addManualHashtagBtn" style="margin-left:5px;">Añadir</button>
-                    </div>
-                    <div id="manualHashtagsList" style="margin-top:5px;"></div>
-                    <div id="hashtagError" style="color:red;margin-top:5px;"></div>
-                </div>
-            `;
+            <div style="text-align:left;" id="hashtags-modal-content">
+              ${suggestedHashtags
+                  .map(
+                      (tag, i) =>
+                          `<label style="display:block;">
+                      <input type="checkbox" value="${tag}" id="hashtag_${i}" checked />
+                      #${tag}
+                    </label>`
+                  )
+                  .join("")}
+              <div style="margin-top:10px;">
+                <input type="text" id="manualHashtagInput" placeholder="Añadir hashtag manual" style="width:70%;" maxlength="30"/>
+                <button 
+                  type="button" 
+                  id="addManualHashtagBtn" 
+                  style="margin-left:5px;"
+                  onclick="
+                    (function() {
+                      const input = document.getElementById('manualHashtagInput');
+                      const errorDiv = document.getElementById('hashtagError');
+                      const list = document.getElementById('manualHashtagsList');
+                      let manualHashtags = window.manualHashtags || [];
+                      let val = input.value.trim().replace(/^#/, '');
+                      
+                      if (!val) return;
+                      
+                      if (manualHashtags.length + ${
+                          suggestedHashtags.length
+                      } >= 5) {
+                        errorDiv.textContent = 'Máximo 5 hashtags en total.';
+                        return;
+                      }
+                      
+                      if (manualHashtags.includes(val) || 
+                          [${suggestedHashtags
+                              .map((tag) => `'${tag}'`)
+                              .join(",")}].some(tag => tag === val)) {
+                        errorDiv.textContent = 'Hashtag repetido.';
+                        return;
+                      }
+                      
+                      manualHashtags.push(val);
+                      window.manualHashtags = manualHashtags;
+                      input.value = '';
+                      errorDiv.textContent = '';
+                      
+                      // Actualizar la lista visual
+                      list.innerHTML = manualHashtags.map((tag, idx) => 
+                        \`
+                          <span style='display:inline-block;background:#e0e7ff;color:#3730a3;padding:2px 8px;border-radius:12px;margin:2px;'>
+                            #\${tag}
+                            <button type='button' data-idx='\${idx}' style='background:none;border:none;color:#a00;font-weight:bold;cursor:pointer;' onclick='removeManualTag(\${idx})'>&times;</button>
+                          </span>
+                        \`
+                      ).join('');
+                    })();
+                  "
+                >Añadir</button>
+              </div>
+              <div id="manualHashtagsList" style="margin-top:5px;"></div>
+              <div id="hashtagError" style="color:red;margin-top:5px;"></div>
+            </div>
+          `;
 
             const swalResult = await Swal.fire({
                 title: "Selecciona hashtags sugeridos o añade propios",
@@ -407,10 +477,28 @@ export default function TwitterStyleFeed({
         const tagText = (tag.hashtag_text || tag)
             .toLowerCase()
             .replace(/^#/, "");
-        setHashtagQuery((prev) =>
-            prev.includes(tagText) ? prev : [...prev, tagText]
-        );
+        if (!hashtagQuery.includes(tagText)) {
+            setHashtagQuery([...hashtagQuery, tagText]);
+        }
+        setHashtagSearch(""); // Limpiar el input después de hacer clic
     };
+
+    const removeHashtag = (tagToRemove) => {
+        setHashtagQuery(hashtagQuery.filter((tag) => tag !== tagToRemove));
+    };
+
+    const addHashtag = (newTag) => {
+        const normalizedTag = newTag.toLowerCase().replace(/^#/, "");
+        if (hashtagQuery.length < 5 && !hashtagQuery.includes(normalizedTag)) {
+            setHashtagQuery([...hashtagQuery, normalizedTag]);
+        }
+        setHashtagSearch(""); // Limpiar el input
+        setHashtagSuggestions([]); // Cerrar el dropdown
+    };
+    const normalizedSearch = hashtagSearch
+        .trim()
+        .replace(/^#/, "")
+        .toLowerCase();
 
     const filteredPublications = publications.filter((pub) => {
         // Filtro por tipo (General/Siguiendo)
@@ -421,11 +509,20 @@ export default function TwitterStyleFeed({
             return false;
         }
 
-        // Filtro por hashtag
-        if (hashtagSearch) {
-            const searchTerm = hashtagSearch.toLowerCase().replace(/^#/, "");
-            return pub.hashtags?.some((tag) =>
-                (tag.hashtag_text || tag).toLowerCase().includes(searchTerm)
+        // Filtro por hashtag: si hay texto en el input pero no se ha seleccionado un hashtag específico
+        if (!hashtagQuery.length && normalizedSearch) {
+            return pub.hashtags?.some((tag) => {
+                const tagText = (tag.hashtag_text || tag).toLowerCase();
+                return tagText.includes(normalizedSearch);
+            });
+        }
+
+        // Filtro por hashtags seleccionados
+        if (hashtagQuery.length > 0) {
+            return hashtagQuery.every((q) =>
+                pub.hashtags?.some(
+                    (tag) => (tag.hashtag_text || tag).toLowerCase() === q
+                )
             );
         }
 
@@ -433,33 +530,31 @@ export default function TwitterStyleFeed({
     });
 
     const fetchHashtagSuggestions = async (query) => {
-        if (!query) {
-            setHashtagSuggestions([]);
-            return;
-        }
+        if (!query) return;
         try {
             const res = await fetch(
                 `/hashtags/search?q=${encodeURIComponent(query)}`
             );
             const data = await res.json();
-            setHashtagSuggestions(data.hashtags || []);
+            setHashtagSuggestions(data.hashtags || []); // Asegura que el campo coincida con el backend
         } catch {
             setHashtagSuggestions([]);
         }
     };
 
     useEffect(() => {
-        if (filter === "hashtag" && hashtagSearch.length > 0) {
+        if (hashtagSearch.length > 0) {
             fetchHashtagSuggestions(hashtagSearch.trim().replace(/^#/, ""));
         } else {
             setHashtagSuggestions([]);
         }
-    }, [hashtagSearch, filter]);
+    }, [hashtagSearch, hashtagQuery]);
 
     return (
         <AuthenticatedLayout
             authUser={authUser}
             followers={followers}
+            imageURL={showImageModal}
             header={
                 <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 z-10">
                     <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">
@@ -497,14 +592,18 @@ export default function TwitterStyleFeed({
             {/* Buscador de Hashtags (fuera del sticky) */}
             <div className="relative px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-black">
                 <div className="max-w-xl mx-auto">
-                    <div className="relative my-4">
+                    {/* Este contenedor debe ser relativo */}
+                    <div ref={containerRef} className="relative my-4">
                         <FaHashtag className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-500 text-lg" />
                         <input
                             type="text"
                             value={hashtagSearch}
+                            onFocus={() => setIsSuggestionOpen(true)}
                             onChange={(e) => {
-                                setHashtagSearch(e.target.value);
+                                const value = e.target.value;
+                                setHashtagSearch(value);
                                 setHighlightedIndex(-1);
+                                setIsSuggestionOpen(true);
                             }}
                             placeholder="Buscar por hashtag..."
                             className="w-full pl-10 pr-4 py-2 rounded-full bg-blue-50 dark:bg-blue-200 border border-blue-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow transition"
@@ -540,36 +639,58 @@ export default function TwitterStyleFeed({
                                 }
                             }}
                         />
+                        {/* Lista de sugerencias posicionada justo debajo del input */}
+                        {isSuggestionOpen && (
+                            <div className="absolute top-full left-0 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg z-50 overflow-hidden">
+                                {hashtagSearch.trim() === "" ? (
+                                    <div className="px-4 py-2 text-gray-500 dark:text-gray-300">
+                                        Busca hashtags para descubrir tendencias
+                                        y conversaciones
+                                    </div>
+                                ) : hashtagSuggestions.filter((tag) =>
+                                      tag
+                                          .toLowerCase()
+                                          .includes(normalizedSearch)
+                                  ).length > 0 ? (
+                                    hashtagSuggestions
+                                        .filter((tag) =>
+                                            tag
+                                                .toLowerCase()
+                                                .includes(normalizedSearch)
+                                        )
+                                        .map((tag, idx) => (
+                                            <button
+                                                key={tag}
+                                                type="button"
+                                                className={`w-full px-4 py-2 text-left transition ${
+                                                    highlightedIndex === idx
+                                                        ? "bg-blue-50 dark:bg-gray-700"
+                                                        : "hover:bg-gray-100 dark:hover:bg-gray-700"
+                                                }`}
+                                                onMouseEnter={() =>
+                                                    setHighlightedIndex(idx)
+                                                }
+                                                onClick={() => addHashtag(tag)}
+                                            >
+                                                <p className="text black dark:text-white">
+                                                    #{tag}
+                                                </p>
+                                            </button>
+                                        ))
+                                ) : (
+                                    <div className="px-4 py-2 text-gray-500 dark:text-gray-300">
+                                        No hay resultados. ¡Sé el primero en
+                                        usar este hashtag!
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
-
-                    {hashtagSuggestions.length > 0 && (
-                        <div className="absolute left-0 right-0 mt-2 mx-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg z-50 overflow-hidden">
-                            {hashtagSuggestions.map((tag, idx) => (
-                                <button
-                                    key={tag}
-                                    type="button"
-                                    className={`w-full px-4 py-2 text-left transition ${
-                                        highlightedIndex === idx
-                                            ? "bg-blue-50 dark:bg-gray-700"
-                                            : "hover:bg-gray-100 dark:hover:bg-gray-700"
-                                    }`}
-                                    onMouseEnter={() =>
-                                        setHighlightedIndex(idx)
-                                    }
-                                    onClick={() => {
-                                        setHashtagSearch(`#${tag}`);
-                                        setHashtagSuggestions([]);
-                                    }}
-                                >
-                                    #{tag}
-                                </button>
-                            ))}
-                        </div>
-                    )}
                 </div>
             </div>
+
             {/* Etiquetas activas */}
-            {filter === "hashtag" && hashtagQuery.length > 0 && (
+            {hashtagQuery.length > 0 && (
                 <div className="flex gap-2 mt-3 flex-wrap px-4">
                     {hashtagQuery.map((tag) => (
                         <span
@@ -579,12 +700,8 @@ export default function TwitterStyleFeed({
                             #{tag}
                             <button
                                 type="button"
+                                onClick={() => removeHashtag(tag)}
                                 className="ml-2 text-red-500 hover:text-red-700"
-                                onClick={() =>
-                                    setHashtagQuery(
-                                        hashtagQuery.filter((t) => t !== tag)
-                                    )
-                                }
                             >
                                 <FaTimes className="w-3 h-3" />
                             </button>
@@ -877,6 +994,11 @@ export default function TwitterStyleFeed({
                                                     src={publication.imageURL}
                                                     alt="Publicación"
                                                     className="w-full h-auto object-contain max-h-96 block"
+                                                    onClick={() =>
+                                                        handleImageClick(
+                                                            publication.imageURL
+                                                        )
+                                                    }
                                                 />
                                             </div>
                                         )}

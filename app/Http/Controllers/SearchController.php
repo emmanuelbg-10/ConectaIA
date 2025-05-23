@@ -48,7 +48,7 @@ class SearchController extends Controller
         $type = $request->input('type', 'users');
         $q = $request->input('q', '');
 
-        if (strlen($q) < 2) {
+        if (strlen($q) < 1) {
             return response()->json([]);
         }
 

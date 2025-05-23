@@ -17,7 +17,7 @@ return new class extends Migration
     $table->foreignId('user_sender_id')->constrained('users')->onDelete('cascade');
     // FK user_receiver_id(INT) - Referencia a la tabla users
     $table->foreignId('user_receiver_id')->constrained('users')->onDelete('cascade');
-    $table->text('content'); // content(TEXT)
+    $table->text('content')->nullable();
     $table->string('imageURL')->nullable(); // ImageURL (VARCHAR(255))
     $table->boolean('read')->default(false); // read(BOOLEAN) - Por defecto no leído
     $table->timestamp('sent_at')->useCurrent(); // sent_at(TIMESTAMP) - Usamos el valor del diagrama
