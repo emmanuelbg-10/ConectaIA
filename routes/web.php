@@ -120,7 +120,7 @@ Route::get('/search', [\App\Http\Controllers\SearchController::class, 'search'])
 Route::post('/hashtags/suggest', [\App\Http\Controllers\ModerationController::class, 'suggestHashtags']);
 Route::get('/hashtags/search', function (Illuminate\Http\Request $request) {
     $q = $request->query('q', '');
-    $hashtags = \App\Models\Hashtag::where('hashtag_text', 'like', $q . '%')
+    $hashtags = \App\Models\Hashtag::where('hashtag_text', 'like', '%' . $q . '%')
         ->limit(10)
         ->pluck('hashtag_text');
     return response()->json(['hashtags' => $hashtags]);
