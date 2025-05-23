@@ -27,7 +27,7 @@ Route::post('/broadcasting/auth', function (Request $request) {
 // Página de bienvenida
 Route::get('/', function () {
     if (Auth::check()) {
-        return redirect()->route('dashboard');
+        return redirect()->route('publications.index');
     }
     return Inertia::render('Welcome', [
         'canLogin' => Route::has('login'),
@@ -36,11 +36,6 @@ Route::get('/', function () {
         'phpVersion' => PHP_VERSION,
     ]);
 });
-
-// Dashboard
-Route::get('/dashboard', function () {
-    return Inertia::render('Dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::get('/profile', function () {
     return Inertia::render('Profile', [
