@@ -82,14 +82,7 @@ export default function AuthenticatedLayout({ children, imageURL }) {
         setTimeout(() => setShowImage(imageURL), 0);
     };
 
-    if (!authUser) {
-        return (
-            <div className="flex items-center justify-center h-screen bg-white dark:bg-black text-gray-500">
-                Cargando usuario...
-            </div>
-        );
-    }
-
+  
     return (
         <div className="min-h-screen w-full bg-white text-black dark:bg-black flex">
             {/* Sidebar principal */}

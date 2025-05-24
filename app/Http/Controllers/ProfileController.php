@@ -168,6 +168,10 @@ class ProfileController extends Controller
 
         Auth::logout();
         $user->delete();
+        // Soft delete de todas sus publicaciones
+        $user->publications()->delete();
+        // Delete de todas sus respuestas
+        $user->responses()->delete();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
