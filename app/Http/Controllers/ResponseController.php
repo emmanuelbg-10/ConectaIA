@@ -9,10 +9,32 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
+/**
+ * Manages responses to other publications.
+ * 
+ * This controller handles the storage, updating and deletion of
+ * responses to publications, which only supports text.
+ */
 class ResponseController extends Controller
 {
     use AuthorizesRequests;
-    // Crear una respuesta (a publicación o a otra respuesta)
+    
+    /**
+     * Create a response to another user's publication.
+     * 
+     * This method receives and then validates the data being sent as
+     * a response to a user's post, which needs the parent's post ID, which requires to simplify the database query
+     * by making a 'buildTree'. It then redirects with this buildTree by
+     * using Inertia.
+     * 
+     * @param \Illuminate\Http\Request $request
+     * The HTTP request.
+     * @param \App\Models\Publication $publication
+     * The ID of the parent publication.
+     * 
+     * @return \Symfony\Component\HttpFoundation\Response
+     * Redirect by triggering a full page load to 'publications.show' through Inertia
+     */
     public function store(Request $request, Publication $publication)
     
     {
@@ -57,7 +79,23 @@ class ResponseController extends Controller
         return Inertia::location(route('publications.show', $publication->id));
     }
 
-    // Editar una respuesta
+    /**
+     * Update an existing response.
+     * 
+     * This method fetches the response's ID and allows the user to
+     * edit it's content, then it reassociates it to the original
+     * publication it's nested inside of.
+     * 
+     * @param \Illuminate\Http\Request $request
+     * The HTTP request.
+     * @param \App\Models\Response $response
+     * The response ID.
+     * 
+     * @return \Symfony\Component\HttpFoundation\Response
+     * Triggers a full page load to the 'publications.show' view and
+     * specifically to the publication in which the response was modified
+     * in.
+     */
     public function update(Request $request, Response $response)
     {
         $this->authorize('update', $response);
@@ -76,7 +114,20 @@ class ResponseController extends Controller
         return Inertia::location(route('publications.show', $publicationId));
     }
 
-    // Borrar una respuesta
+    /**
+     * Delete an existing response.
+     * 
+     * This method fetches the response's ID and allows the user to
+     * delete it, then it reassociates it to the original
+     * publication it's nested inside of.
+     * 
+     * @param \App\Models\Response $response
+     * The response ID about to be deleted
+     * 
+     * @return \Symfony\Component\HttpFoundation\Response
+     * Triggers a full page load to the 'publications.show' view and
+     * specifically to the publication in which the response was deleted from.
+     */
     public function destroy(Response $response)
     {
         $this->authorize('delete', $response);

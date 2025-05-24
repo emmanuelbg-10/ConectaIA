@@ -12,7 +12,7 @@ use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable // implements MustVerifyEmail (si aplica)
 {
-    use HasFactory, Notifiable,HasRoles,SoftDeletes;
+    use HasFactory, Notifiable, HasRoles, SoftDeletes;
 
     /**
      * The attributes that are mass assignable.
@@ -20,9 +20,25 @@ class User extends Authenticatable // implements MustVerifyEmail (si aplica)
      * @var array<int, string>
      */
     protected $fillable = [
+        /**
+         * The username.
+         * @var string
+         */
         'name',
+        /**
+         * The user's email.
+         * @var string
+         */
         'email',
+        /**
+         * The user's password
+         * @var string
+         */
         'password',
+        /**
+         * The URL where the avatar of the user is stored.
+         * @var string
+         */
         'avatarURL',
         'roleId',
     ];
@@ -56,10 +72,13 @@ class User extends Authenticatable // implements MustVerifyEmail (si aplica)
         ];
     }
 
-    // --- RELACIONES ---
+    // --- RELATIONSHIPS ---
 
     /**
-     * Publicaciones creadas por el usuario.
+     * Publications created by the user. One-to-many.
+     * 
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     * Returns a one-to-many relationship instance.
      */
     public function publications(): HasMany
     {
@@ -67,7 +86,10 @@ class User extends Authenticatable // implements MustVerifyEmail (si aplica)
     }
 
     /**
-     * Mensajes enviados por el usuario.
+     * Messages sent by the user. One-to-many.
+     * 
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     * Returns a one-to-many relationship instance.
      */
     public function sentMessages(): HasMany
     {
@@ -75,7 +97,10 @@ class User extends Authenticatable // implements MustVerifyEmail (si aplica)
     }
 
     /**
-     * Mensajes recibidos por el usuario.
+     * Messages received by the user. One-to-many.
+     * 
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     * Returns a one-to-many relationship instance.
      */
     public function receivedMessages(): HasMany
     {
@@ -83,7 +108,10 @@ class User extends Authenticatable // implements MustVerifyEmail (si aplica)
     }
 
     /**
-     * Notificaciones para este usuario.
+     * The notifications sent to the user. One-to-many
+     * 
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     * Returns a one-to-many relationship instance.
      */
     public function notifications(): HasMany
     {
@@ -91,7 +119,10 @@ class User extends Authenticatable // implements MustVerifyEmail (si aplica)
     }
 
     /**
-     * Notificaciones causadas por este usuario.
+     * Notifications caused by the user. One-to-many.
+     * 
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     * Returns a one-to-many relationship instance.
      */
     public function triggeredNotifications(): HasMany
     {
@@ -99,7 +130,10 @@ class User extends Authenticatable // implements MustVerifyEmail (si aplica)
     }
 
     /**
-     * Interacciones realizadas por el usuario.
+     * Interactions done by the user. One-to-many.
+     * 
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     * Returns a one-to-many relationship instance.
      */
     public function interactions(): HasMany
     {
@@ -107,7 +141,10 @@ class User extends Authenticatable // implements MustVerifyEmail (si aplica)
     }
 
     /**
-     * Menciones hechas a este usuario.
+     * Mentions done to a user. One-to-many.
+     * 
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     * Returns a one-to-many relationship instance.
      */
     public function mentions(): HasMany
     {
@@ -115,7 +152,11 @@ class User extends Authenticatable // implements MustVerifyEmail (si aplica)
     }
 
     /**
-     * Los usuarios que este usuario sigue (followed).
+     * Followed users by this account. Many-to-many
+     * 
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
+     * Returns a many-to-many relationship instance with the pivot
+     * table 'followings'.
      */
     public function following(): BelongsToMany
     {
@@ -124,7 +165,11 @@ class User extends Authenticatable // implements MustVerifyEmail (si aplica)
     }
 
     /**
-     * Los usuarios que siguen a este usuario (followers).
+     * The users that are following this account. Many-to-many
+     * 
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
+     * Returns a many-to-many relationship instance with the pivot
+     * table 'followings'.
      */
     public function followers(): BelongsToMany
     {        
@@ -132,18 +177,37 @@ class User extends Authenticatable // implements MustVerifyEmail (si aplica)
         return $this->belongsToMany(User::class, 'followings', 'followed_id', 'follower_id')->withTimestamps();
     }
 
-    public function likes() {
-    return $this->hasMany(Like::class);
-}
+    /**
+     * The likes this user has given. One-to-many.
+     * 
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     * Returns a one-to-many relationship instance.
+     */
+    public function likes()
+    {
+        return $this->hasMany(Like::class);
+    }
 
-public function responses()
-{
-    return $this->hasMany(\App\Models\Response::class);
-}
+    /**
+     * The responses this user has done. One-to-many.
+     * 
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     * Returns a one-to-many relationship instance.
+     */
+    public function responses()
+    {
+        return $this->hasMany(\App\Models\Response::class);
+    }
 
-public function friends()
-{
-    return $this->belongsToMany(User::class, 'friendships', 'sender_id', 'receiver_id')
-        ->wherePivot('status', 'accepted');
-}
+    /**
+     * The friends of a specific user. Many-to-many.
+     * 
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
+     * Returns a many-to-many relationship instance.
+     */
+    public function friends()
+    {
+        return $this->belongsToMany(User::class, 'friendships', 'sender_id', 'receiver_id')
+            ->wherePivot('status', 'accepted');
+    }
 }
