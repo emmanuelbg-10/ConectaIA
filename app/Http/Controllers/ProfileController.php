@@ -32,6 +32,7 @@ class ProfileController extends Controller
                     'id' => $user->id,
                     'name' => $user->name,
                     'email' => $user->email,
+                    'avatarURL' => $user->avatarURL,
                     // ...otros campos que necesites...
                     'is_admin' => $user->hasRole('administrador'),
                     'is_moderator' => $user->hasRole('moderador'),
