@@ -18,7 +18,6 @@ import ModalSearch from "@/Components/ModalSearch";
 import ModalImage from "@/Components/ModalImage";
 
 export default function AuthenticatedLayout({ children, imageURL }) {
-
     const [windowWidth, setWindowWidth] = useState(window.innerWidth);
     const isMobileChat = windowWidth < 1200;
     const [selectedChat, setSelectedChat] = useState(null);
@@ -100,7 +99,7 @@ export default function AuthenticatedLayout({ children, imageURL }) {
                 <NavLink
                     href="/publications"
                     icon={FiHome}
-                    label="Home"
+                    label="Inicio"
                     active={window.location.pathname.startsWith(
                         "/publications"
                     )}
@@ -108,17 +107,24 @@ export default function AuthenticatedLayout({ children, imageURL }) {
                 <NavLink
                     href="#"
                     icon={FiSearch}
-                    label="Search"
+                    label="Buscador"
                     onClick={(e) => {
                         e.preventDefault();
                         setShowSearch(true);
                     }}
                 />
+                {isMobileChat && (
+                    <NavLink
+                        href={route("chats")}
+                        icon={FiUsers}
+                        label="Chat"
+                    />
+                )}
                 <div className="relative">
                     <NavLink
                         href="#"
                         icon={FiBell}
-                        label="Alerts"
+                        label="Alertas"
                         onClick={(e) => {
                             e.preventDefault();
                             openAlerts();
@@ -131,22 +137,15 @@ export default function AuthenticatedLayout({ children, imageURL }) {
                 <NavLink
                     href={route("profile")}
                     icon={FiUser}
-                    label="Profile"
+                    label="Perfil"
                     active={route().current("profile")}
                 />
                 <NavLink
                     href={route("settings.edit")}
                     icon={FiSettings}
-                    label="Settings"
+                    label="Ajustes"
                     active={route().current("settings.edit")}
                 />
-                {isMobileChat && (
-                    <NavLink
-                        href={route("chats")}
-                        icon={FiUsers}
-                        label="People"
-                    />
-                )}
             </aside>
 
             {/* Contenido principal y Nav inferior */}
@@ -175,7 +174,7 @@ export default function AuthenticatedLayout({ children, imageURL }) {
                     <NavLink
                         href="/publications"
                         icon={FiHome}
-                        label="Home"
+                        label="Inicio"
                         active={window.location.pathname.startsWith(
                             "/publications"
                         )}
@@ -183,39 +182,41 @@ export default function AuthenticatedLayout({ children, imageURL }) {
                     <NavLink
                         href="#"
                         icon={FiSearch}
-                        label="Search"
+                        label="Buscador"
                         onClick={(e) => {
                             e.preventDefault();
                             setShowSearch(true);
                         }}
                     />
                     <NavLink
-                        href="#"
-                        icon={FiBell}
-                        label="Alerts"
-                        onClick={(e) => {
-                            e.preventDefault();
-                            openAlerts();
-                        }}
+                        href={route("chats")}
+                        icon={FiUsers}
+                        label="Chat"
                     />
                     <Link href="/publications">
                         <ApplicationLogo className="h-8 w-8 text-black dark:text-white" />
                     </Link>
                     <NavLink
+                        href="#"
+                        icon={FiBell}
+                        label="Alertas"
+                        onClick={(e) => {
+                            e.preventDefault();
+                            openAlerts();
+                        }}
+                    />
+
+                    <NavLink
                         href={route("profile")}
                         icon={FiUser}
-                        label="Profile"
+                        label="Perfil"
                         active={route().current("profile")}
                     />
-                    <NavLink
-                        href={route("chats")}
-                        icon={FiUsers}
-                        label="People"
-                    />
+
                     <NavLink
                         href={route("settings.edit")}
                         icon={FiSettings}
-                        label="Settings"
+                        label="Ajustes"
                         active={route().current("settings.edit")}
                     />
                 </nav>
