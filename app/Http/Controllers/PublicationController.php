@@ -212,8 +212,8 @@ public function show(Publication $publication)
             ->exists();
     
         $publication->following = $following;
-    
-        return redirect()->back(303)->with('success', 'Publicación creada con éxito.');
+    // Forzar recarga completa de la página de publicaciones
+    return \Inertia\Inertia::location(route('publications.index'));
     }
 
     /**

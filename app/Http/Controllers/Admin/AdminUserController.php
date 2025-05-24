@@ -16,6 +16,11 @@ class AdminUserController extends Controller
 {
     public function index(Request $request)
     {
+         $user = $request->user();
+          // Si NO es admin NI moderador, redirige a Settings/Edit
+    if (!$user->hasRole('administrador') && !$user->hasRole('moderador')) {
+        return redirect()->route('settings.edit');
+    }
         // Obtener usuarios, incluyendo los baneados (soft-deleted)
         $users = User::withTrashed()
             ->with('roles') // Cargar roles para mostrar en la tabla

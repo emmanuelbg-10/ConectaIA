@@ -8,6 +8,7 @@ import AvatarUploader from "@/Components/AvatarUploader";
 
 export default function Edit({ mustVerifyEmail, status }) {
     const user = usePage().props.auth.user;
+console.log(user.roles);
 
     return (
         <AuthenticatedLayout>
@@ -17,7 +18,7 @@ export default function Edit({ mustVerifyEmail, status }) {
                 <div className="mx-auto max-w-7xl space-y-12 sm:px-6 lg:px-8">
                     {/* Mostrar enlace solo si el usuario es admin */}
 
-                    {user && (
+                    {user && (user.is_admin || user.is_moderator) && (
                         <div className="mb-4">
                             <Link
                                 href={route("admin.users.index")}
