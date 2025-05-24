@@ -71,6 +71,18 @@ class ProfileController extends Controller
 
     /**
      * Handle the avatar upload to Cloudinary.
+     * 
+     * This method allows the user to upload several image types to use as their
+     * avatar.
+     * It also at the same time checks if one already exists and replaces it by the new one.
+     * Finally it returns a success or error message depending on the state of the upload and
+     * if the Cloudinary API is currently working or not.
+     * 
+     * @param \Illuminate\Http\Request $request
+     * The HTTP request to upload an image.
+     * 
+     * @return \Illuminate\Http\RedirectResponse
+     * Redirects back with either a success or error message.
      */
     public function updateAvatar(Request $request)
     {
@@ -130,6 +142,15 @@ class ProfileController extends Controller
 
     /**
      * Delete the user's avatar from Cloudinary and set avatarURL to null.
+     * 
+     * This method deletes from the Cloudinary servers the image previously
+     * uploaded by the user, and then returns either a success or error message.
+     * 
+     * @param \Illuminate\Http\Request $request
+     * The HTTP request to delete an image.
+     * 
+     * @return \Illuminate\Http\RedirectResponse
+     * Redirects back with either a success or error message.
      */
     public function deleteAvatar(Request $request): RedirectResponse
     {

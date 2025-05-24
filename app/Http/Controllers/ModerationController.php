@@ -94,6 +94,19 @@ EOT;
         }
     }
 
+    /**
+     * Suggests up to 5 relevant hashtags for a given text using the Gemini API.
+     *
+     * This method analyzes the provided text and generates a list of up to 5 relevant hashtags.
+     * It prioritizes reusing existing hashtags from the database if they are relevant, and may suggest new ones if necessary.
+     * The hashtags are returned as a JSON response, without the '#' symbol.
+     *
+     * @param  \Illuminate\Http\Request  $request  
+     * The incoming HTTP request containing the 'text' input.
+     * 
+     * @return \Illuminate\Http\JsonResponse  
+     * A JSON response with the suggested hashtags or an error message.
+     */
     public function suggestHashtags(Request $request)
     {
         $apiKey = env('GEMINI_API_KEY');
