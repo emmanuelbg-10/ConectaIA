@@ -39,9 +39,22 @@ class ProfileController extends Controller
      */
     public function edit(Request $request): Response
     {
+        $user = $request->user();
+
         return Inertia::render('Settings/Edit', [
-            'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
+            'mustVerifyEmail' => $user instanceof MustVerifyEmail,
             'status' => session('status'),
+            'auth' => [
+                'user' => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'avatarURL' => $user->avatarURL,
+                    // ...otros campos que necesites...
+                    'is_admin' => $user->hasRole('administrador'),
+                    'is_moderator' => $user->hasRole('moderador'),
+                ],
+            ],
         ]);
     }
 
@@ -226,6 +239,10 @@ class ProfileController extends Controller
 
         Auth::logout();
         $user->delete();
+        // Soft delete de todas sus publicaciones
+        $user->publications()->delete();
+        // Delete de todas sus respuestas
+        $user->responses()->delete();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 

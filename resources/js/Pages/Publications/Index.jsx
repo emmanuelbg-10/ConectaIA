@@ -406,7 +406,8 @@ export default function TwitterStyleFeed({
                 preserveScroll: true,
                 preserveState: true,
                 onSuccess: () => {
-                    reset();
+                    setData("textContent", "");
+                    setData("image", null);
                     setData("preview", null);
                     setShowForm(false);
                     Swal.fire(
@@ -419,6 +420,9 @@ export default function TwitterStyleFeed({
                     setPublications((prev) =>
                         prev.filter((p) => p.id !== optimisticPublication.id)
                     );
+                    setData("textContent", "");
+                    setData("image", null);
+                    setData("preview", null);
                     Swal.fire(
                         "Error",
                         "No se pudo publicar. Intenta de nuevo.",
@@ -492,8 +496,9 @@ export default function TwitterStyleFeed({
         if (hashtagQuery.length < 5 && !hashtagQuery.includes(normalizedTag)) {
             setHashtagQuery([...hashtagQuery, normalizedTag]);
         }
-        setHashtagSearch(""); // Limpiar el input
-        setHashtagSuggestions([]); // Cerrar el dropdown
+        setHashtagSearch(""); // Limpia el input
+        setHashtagSuggestions([]); // Elimina sugerencias
+        setIsSuggestionOpen(false); // Cierra el menú desplegable
     };
     const normalizedSearch = hashtagSearch
         .trim()
@@ -609,6 +614,12 @@ export default function TwitterStyleFeed({
                             className="w-full pl-10 pr-4 py-2 rounded-full bg-blue-50 dark:bg-blue-200 border border-blue-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow transition"
                             autoComplete="off"
                             onKeyDown={(e) => {
+                                const trimmedSearch = hashtagSearch
+                                    .trim()
+                                    .replace(/^#/, "")
+                                    .toLowerCase();
+
+                                // Manejo de flechas (sin cambios)
                                 if (hashtagSuggestions.length > 0) {
                                     if (e.key === "ArrowDown") {
                                         e.preventDefault();
@@ -624,17 +635,14 @@ export default function TwitterStyleFeed({
                                                 ? i - 1
                                                 : hashtagSuggestions.length - 1
                                         );
-                                    } else if (
-                                        e.key === "Enter" &&
-                                        highlightedIndex >= 0
-                                    ) {
-                                        e.preventDefault();
-                                        const tag =
-                                            hashtagSuggestions[
-                                                highlightedIndex
-                                            ];
-                                        setHashtagSearch(`#${tag}`);
-                                        setHashtagSuggestions([]);
+                                    }
+                                }
+
+                                // Manejo de Enter (corrección aplicada)
+                                if (e.key === "Enter") {
+                                    e.preventDefault();
+                                    if (trimmedSearch) {
+                                        addHashtag(trimmedSearch); // Añade el hashtag escrito
                                     }
                                 }
                             }}

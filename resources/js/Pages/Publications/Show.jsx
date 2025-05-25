@@ -193,6 +193,7 @@ function ResponseItem({
                                     onSubmit={(e) =>
                                         handleEditSubmit(e, response.id)
                                     }
+                                    className="bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl p-4 shadow-sm transition-all"
                                 >
                                     <textarea
                                         ref={editTextAreaRef}
@@ -687,7 +688,9 @@ export default function Show({ publication: initialPublication, authUser }) {
                                     src={publication.imageURL}
                                     alt=""
                                     className="mt-4 rounded-md max-h-96 w-full object-cover"
-                                    onClick={() => handleImageClick(publication.imageURL)}
+                                    onClick={() =>
+                                        handleImageClick(publication.imageURL)
+                                    }
                                 />
                             )}
                             <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
@@ -760,7 +763,7 @@ export default function Show({ publication: initialPublication, authUser }) {
                     {!hasMore && (
                         <Link
                             href={route("publications.index")}
-                            className=" mt-6 text-[#214478] hover:underline focus:outline-none focus:ring-2 focus:ring-[#214478] focus-ring-offset-2 flex items-center"
+                            className=" mt-6 text-[#214478] dark:text-blue-600 hover:underline focus:outline-none focus:ring-2 focus:ring-[#214478] focus-ring-offset-2 flex items-center"
                         >
                             <FiArrowLeft className="h-5 w-5 inline-block align-middle mr-1" />
                             Volver al feed
