@@ -38,10 +38,20 @@ Route::get('/', function () {
 });
 
 Route::get('/profile', function () {
+    $user = Auth::user();
     return Inertia::render('Profile', [
         'auth' => [
-            'user' => Auth::user(),
+            'user' => [
+                // ...otros campos...
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'avatarURL' => $user->avatarURL,
+                // ...
+            ],
         ],
+        'followersCount' => $user->followers()->count(),
+        'followingCount' => $user->following()->count(),
     ]);
 })->middleware(['auth', 'verified'])->name('profile');
 

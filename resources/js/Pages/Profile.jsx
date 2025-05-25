@@ -5,7 +5,7 @@ import { FiLogOut } from "react-icons/fi";
 import AvatarUploader from "@/Components/AvatarUploader";
 import Loader from "@/Components/Loader";
 
-export default function Profile({ auth }) {
+export default function Profile({ auth, followersCount = 0, followingCount = 0 }) {
     const user = auth.user;
     const [loggingOut, setLoggingOut] = useState(false);
 
@@ -25,7 +25,16 @@ export default function Profile({ auth }) {
                 <p className="text-sm text-gray-600 dark:text-gray-400">
                     {user.email}
                 </p>
-
+                <div className="flex justify-center gap-8 mt-6 mb-2">
+                    <div>
+                        <span className="font-bold text-lg text-[#214478]">{followersCount}</span>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">Seguidores</div>
+                    </div>
+                    <div>
+                        <span className="font-bold text-lg text-[#214478]">{followingCount}</span>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">Siguiendo</div>
+                    </div>
+                </div>
                 <button
                     onClick={() => {
                         setLoggingOut(true);
