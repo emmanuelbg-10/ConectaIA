@@ -34,7 +34,7 @@ export default function DeleteUserForm({ className = "" }) {
             preserveScroll: true,
             onSuccess: () => cerrarModal(),
             onError: () => passwordInput.current.focus(),
-            onFinish: () => reset(),
+            onFinish: () => window.location.reload(),
         });
     };
 
