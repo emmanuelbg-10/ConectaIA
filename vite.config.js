@@ -15,4 +15,14 @@ export default defineConfig({
             "@": "/resources/js",
         },
     },
+    server: {
+        host: "10.80.100.12", // Tu IP local
+        port: 5173,
+        https: false,
+        cors: true,
+        strictPort: true,
+        watch: {
+            usePolling: true,
+        },
+    },
 });

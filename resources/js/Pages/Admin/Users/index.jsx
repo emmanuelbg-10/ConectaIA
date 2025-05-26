@@ -424,7 +424,7 @@ export default function Index({
                             Cancelar
                         </SecondaryButton>
                         <PrimaryButton
-                            className="ml-3 bg-[#214478] hover:bg-[#183155] dark:bg-[#214478] dark:hover:bg-[#183155] text-white"
+                            className=" ml-3 bg-[#214478] hover:bg-[#183155] dark:bg-[#214478] dark:hover:bg-[#183155] text-black dark:text-white"
                             disabled={processing}
                         >
                             Guardar Cambios
