@@ -15,14 +15,4 @@ export default defineConfig({
             "@": "/resources/js",
         },
     },
-    server: {
-        host: "TuIP", // Tu IP local
-        port: 5173,
-        https: false,
-        cors: true,
-        strictPort: true,
-        watch: {
-            usePolling: true,
-        },
-    },
 });
