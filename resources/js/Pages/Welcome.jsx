@@ -25,7 +25,7 @@ export default function Welcome() {
 
     return (
         <GuestLayout>
-            <Head title="Welcome" />
+            <Head title="Bienvenido" />
             <div className="max-w-xs mx-auto grid grid-cols-1 gap-4 w-full">
                 <Link href={route("register")}>
                     <PrimaryButton className="w-full">Registro</PrimaryButton>

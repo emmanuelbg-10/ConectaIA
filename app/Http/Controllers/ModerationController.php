@@ -6,8 +6,30 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * Moderation through a large language model.
+ * 
+ * This controller's only purpose is to manage every single publication,
+ * response, message, etc... any social interaction by making sure it's
+ * appropiate according to our guidelines.
+ */
 class ModerationController extends Controller
 {
+    /**
+     * A method that uses AI to moderate social interactions.
+     * 
+     * This method uses the Gemini API to pass any text through it and analyze
+     * to determine if it's allowed to be posted or not with a custom prompt.
+     * It logs the response into 'laravel.logs' for auditing purposes and then
+     * returns a JSON with either a success or error message.
+     * 
+     * @param \Illuminate\Http\Request $request
+     * The HTTP request to call the Gemini API
+     * 
+     * @return \Illuminate\Http\JsonResponse
+     * It returns the "permitted/blocked" response from the Gemini API or an
+     * error message if the operation failed.
+     */
     public function moderate(Request $request)
     {
         Log::info('ModerationController called', $request->all());
@@ -72,6 +94,19 @@ EOT;
         }
     }
 
+    /**
+     * Suggests up to 5 relevant hashtags for a given text using the Gemini API.
+     *
+     * This method analyzes the provided text and generates a list of up to 5 relevant hashtags.
+     * It prioritizes reusing existing hashtags from the database if they are relevant, and may suggest new ones if necessary.
+     * The hashtags are returned as a JSON response, without the '#' symbol.
+     *
+     * @param  \Illuminate\Http\Request  $request  
+     * The incoming HTTP request containing the 'text' input.
+     * 
+     * @return \Illuminate\Http\JsonResponse  
+     * A JSON response with the suggested hashtags or an error message.
+     */
     public function suggestHashtags(Request $request)
     {
         $apiKey = env('GEMINI_API_KEY');

@@ -7,9 +7,29 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
+/**
+ * Handles all the actions related to friends and its requests.
+ * 
+ * This controller deals with the friends system and its requests, allowing
+ * sending said requests and the actions associated with it.
+ */
 class FriendshipController extends Controller
 {
-    // Enviar solicitud de amistad
+    /**
+     * Send a friend request to another user.
+     * 
+     * This method fetches both IDs of the receiver and the sender,
+     * associating them in the database and then returning a JSON response.
+     * 
+     * @param \Illuminate\Http\Request $request
+     * The HTTP request.
+     * @param int $receiver_id
+     * The ID of the user that receives the friend request.
+     * 
+     * @return \Illuminate\Http\JsonResponse
+     * Returns a JSON response indicating either that the user cannot friend
+     * request itself or with a success message.
+     */
     public function sendRequest(Request $request, $receiver_id)
     {
         $sender_id = Auth::id();
@@ -28,7 +48,18 @@ class FriendshipController extends Controller
         return response()->json(['message' => 'Solicitud enviada', 'friendship' => $friendship]);
     }
 
-    // Aceptar solicitud
+    /**
+     * Accepting the friend request.
+     * 
+     * This method makes sure the request actually exists and allows
+     * to accept it. It returns either an unauthorized code or a success message.
+     * 
+     * @param int $id
+     * The ID of the user that received the request.
+     * 
+     * @return \Illuminate\Http\JsonResponse
+     * Returns a JSON with either an error or success message.
+     */
     public function acceptRequest($id)
     {
         $friendship = Friendship::findOrFail($id);
@@ -43,7 +74,18 @@ class FriendshipController extends Controller
         return response()->json(['message' => 'Solicitud aceptada']);
     }
 
-    // Rechazar solicitud
+    /**
+     * Rejecting the friend request.
+     * 
+     * This method makes sure the request actually exists and allows
+     * to reject it. It returns either an unauthorized code or a success message.
+     * 
+     * @param int $id
+     * The ID of the user that received the request.
+     * 
+     * @return \Illuminate\Http\JsonResponse
+     * Returns a JSON with either an error or success message.
+     */
     public function rejectRequest($id)
     {
         $friendship = Friendship::findOrFail($id);
@@ -58,7 +100,12 @@ class FriendshipController extends Controller
         return response()->json(['message' => 'Solicitud rechazada']);
     }
 
-    // Listar solicitudes recibidas
+    /**
+     * Lists all the received friend requests with the 'pending' status.
+     * 
+     * @return \Illuminate\Http\JsonResponse
+     * Returns a JSON response with all the pending requests.
+     */
     public function receivedRequests()
     {
         $requests = Friendship::where('receiver_id', Auth::id())
@@ -69,7 +116,12 @@ class FriendshipController extends Controller
         return response()->json($requests);
     }
 
-    // Listar solicitudes enviadas
+    /**
+     * Lists all the sent friend requests with the 'pending' status.
+     * 
+     * @return \Illuminate\Http\JsonResponse
+     * Returns a JSON response with all the pending requests.
+     */
     public function sentRequests()
     {
         $requests = Friendship::where('sender_id', Auth::id())
@@ -80,7 +132,19 @@ class FriendshipController extends Controller
         return response()->json($requests);
     }
 
-    // Eliminar amistad
+    /**
+     * Remove a friend from the friend's list.
+     * 
+     * This method allows a user to unfriend another one, and
+     * updates the frontend accordingly.
+     * 
+     * @param int $userId
+     * The ID of the user that either sends or receives the
+     * unfriend request.
+     * 
+     * @return \Illuminate\Http\JsonResponse
+     * Returns a JSON response with either a success or error message.
+     */
     public function removeFriend($userId)
     {
         $friendship = Friendship::where(function($query) use ($userId) {
