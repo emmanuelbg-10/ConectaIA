@@ -638,11 +638,21 @@ export default function TwitterStyleFeed({
                                     }
                                 }
 
-                                // Manejo de Enter (corrección aplicada)
                                 if (e.key === "Enter") {
                                     e.preventDefault();
-                                    if (trimmedSearch) {
-                                        addHashtag(trimmedSearch); // Añade el hashtag escrito
+                                    if (
+                                        hashtagSuggestions.length > 0 &&
+                                        highlightedIndex >= 0
+                                    ) {
+                                        // Si hay una sugerencia resaltada, agrégala
+                                        addHashtag(
+                                            hashtagSuggestions[highlightedIndex]
+                                        );
+                                        setHighlightedIndex(-1); // Resetea la selección
+                                        setIsSuggestionOpen(false); // Cierra el menú
+                                    } else if (trimmedSearch) {
+                                        // Si no hay sugerencias o no hay selección, añade el texto del input
+                                        addHashtag(trimmedSearch);
                                     }
                                 }
                             }}

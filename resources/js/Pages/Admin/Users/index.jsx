@@ -234,14 +234,16 @@ export default function Index({
                                                         {user.deleted_at &&
                                                             canUnbanUsers && (
                                                                 <PrimaryButton
-                                                                    className="bg-[#214478] hover:bg-[#183155] dark:bg-[#214478] dark:hover:bg-[#183155] text-white"
+                                                                    className="text-white bg-[#214478] hover:bg-[#183155] dark:bg-[#214478] dark:hover:bg-[#183155] "
                                                                     onClick={() =>
                                                                         handleRestoreUser(
                                                                             user
                                                                         )
                                                                     }
                                                                 >
-                                                                    Restaurar
+                                                                    <span className="text-black dark:text-white">
+                                                                        Restaurar
+                                                                    </span>
                                                                 </PrimaryButton>
                                                             )}
                                                         {!user.deleted_at &&
