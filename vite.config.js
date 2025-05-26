@@ -16,7 +16,7 @@ export default defineConfig({
         },
     },
     server: {
-        host: "10.80.100.12", // Tu IP local
+        host: "TuIP", // Tu IP local
         port: 5173,
         https: false,
         cors: true,

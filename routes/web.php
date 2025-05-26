@@ -26,6 +26,9 @@ Route::post('/broadcasting/auth', function (Request $request) {
 
 // Página de bienvenida
 Route::get('/', function () {
+    if (Auth::check()) {
+        return redirect()->route('publications.index');
+    }
     return Inertia::render('Welcome', [
         'canLogin' => Route::has('login'),
         'canRegister' => Route::has('register'),
@@ -34,17 +37,21 @@ Route::get('/', function () {
     ]);
 });
 
-// Dashboard
-Route::get('/dashboard', function () {
-    return Inertia::render('Dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
-
-// Perfil de usuario (con controlador sería mejor a futuro)
 Route::get('/profile', function () {
+    $user = Auth::user();
     return Inertia::render('Profile', [
         'auth' => [
-            'user' => Auth::user(),
+            'user' => [
+                // ...otros campos...
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'avatarURL' => $user->avatarURL,
+                // ...
+            ],
         ],
+        'followersCount' => $user->followers()->count(),
+        'followingCount' => $user->following()->count(),
     ]);
 })->middleware(['auth', 'verified'])->name('profile');
 
@@ -88,8 +95,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('/responses/{response}', [ResponseController::class, 'destroy'])->name('responses.destroy');
 });
 
-// Chat
-Route::get('/chat', [ChatController::class, 'index'])->name('chat.index');
 
 // Moderación de texto
 Route::post('/moderate-text', [ModerationController::class, 'moderate'])
@@ -120,12 +125,16 @@ Route::get('/search', [\App\Http\Controllers\SearchController::class, 'search'])
 Route::post('/hashtags/suggest', [\App\Http\Controllers\ModerationController::class, 'suggestHashtags']);
 Route::get('/hashtags/search', function (Illuminate\Http\Request $request) {
     $q = $request->query('q', '');
-    $hashtags = \App\Models\Hashtag::where('hashtag_text', 'like', $q . '%')
+    $hashtags = \App\Models\Hashtag::where('hashtag_text', 'like', '%' . $q . '%')
         ->limit(10)
         ->pluck('hashtag_text');
     return response()->json(['hashtags' => $hashtags]);
 });
 
-Route::get('/intro', function () {
-    return Inertia::render('Intro');
-});
+Route::get('chats', function () {
+    return Inertia::render('Chats', [
+        'auth' => [
+            'user' => Auth::user(),
+        ],
+    ]);
+})->name('chats');
