@@ -1,176 +1,242 @@
-import ApplicationLogo from '@/Components/ApplicationLogo';
-import Dropdown from '@/Components/Dropdown';
-import NavLink from '@/Components/NavLink';
-import ResponsiveNavLink from '@/Components/ResponsiveNavLink';
-import { Link, usePage } from '@inertiajs/react';
-import { useState } from 'react';
+import {
+    FiHome,
+    FiSearch,
+    FiBell,
+    FiUser,
+    FiSettings,
+    FiUsers,
+    FiLogOut, // Make sure to import FiLogOut
+} from "react-icons/fi";
+import ApplicationLogo from "@/Components/ApplicationLogo";
+import NavLink from "@/Components/NavLink";
+import { Link, usePage, useForm } from "@inertiajs/react"; // Import useForm
+import React, { useState, useEffect } from "react";
+import ChatSidebar from "@/Components/ChatSidebar";
+import ChatWindow from "@/Components/ChatWindow";
+import ModalAlerts from "@/Components/ModalAlerts";
+import ModalSearch from "@/Components/ModalSearch";
+import ModalImage from "@/Components/ModalImage";
 
-export default function AuthenticatedLayout({ header, children }) {
-    const user = usePage().props.auth.user;
+export default function AuthenticatedLayout({ children, imageURL }) {
+    const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+    const isMobileChat = windowWidth < 1200;
+    const [selectedChat, setSelectedChat] = useState(null);
+    const [messages, setMessages] = useState([]);
+    const [showAlerts, setShowAlerts] = useState(false);
+    const [showImage, setShowImage] = useState(imageURL);
+    const [alertsData, setAlertsData] = useState({
+        recentMessages: [],
+        recentFollowers: [],
+        friendRequests: [],
+    });
+    const [hasNewAlerts, setHasNewAlerts] = useState(false);
+    const [showSearch, setShowSearch] = useState(false);
+    const { props } = usePage();
+    const authUser = props.auth?.user;
 
-    const [showingNavigationDropdown, setShowingNavigationDropdown] =
-        useState(false);
+    const { post } = useForm();
 
+    useEffect(() => {
+        const handleResize = () => {
+            setWindowWidth(window.innerWidth);
+        };
+        window.addEventListener("resize", handleResize);
+        return () => window.removeEventListener("resize", handleResize);
+    }, []);
+
+    useEffect(() => {
+        fetch("/alerts/data")
+            .then((res) => res.json())
+            .then((data) => {
+                setAlertsData(data);
+                if (
+                    data.friendRequests.length > 0 ||
+                    data.recentMessages.length > 0 ||
+                    data.recentFollowers.length > 0
+                ) {
+                    setHasNewAlerts(true);
+                }
+            });
+    }, []);
+
+    // Sincroniza showImage con imageURL si cambia el prop
+    useEffect(() => {
+        setShowImage(imageURL);
+    }, [imageURL]);
+
+    const openAlerts = async () => {
+        setShowAlerts(true);
+        setHasNewAlerts(false);
+    };
+
+    const handleChatSelect = async (chat) => {
+        setSelectedChat(chat);
+        const res = await fetch(`/messages/${chat.id}`);
+        const data = await res.json();
+        setMessages(data);
+    };
+
+    const handleShowImageModal = (imageURL) => {
+        setShowImage(null);
+        setTimeout(() => setShowImage(imageURL), 0);
+    };
+
+  
     return (
-        <div className="min-h-screen bg-gray-100">
-            <nav className="border-b border-gray-100 bg-white">
-                <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                    <div className="flex h-16 justify-between">
-                        <div className="flex">
-                            <div className="flex shrink-0 items-center">
-                                <Link href="/">
-                                    <ApplicationLogo className="block h-9 w-auto fill-current text-gray-800" />
-                                </Link>
-                            </div>
-
-                            <div className="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
-                                <NavLink
-                                    href={route('dashboard')}
-                                    active={route().current('dashboard')}
-                                >
-                                    Dashboard
-                                </NavLink>
-                            </div>
-                        </div>
-
-                        <div className="hidden sm:ms-6 sm:flex sm:items-center">
-                            <div className="relative ms-3">
-                                <Dropdown>
-                                    <Dropdown.Trigger>
-                                        <span className="inline-flex rounded-md">
-                                            <button
-                                                type="button"
-                                                className="inline-flex items-center rounded-md border border-transparent bg-white px-3 py-2 text-sm font-medium leading-4 text-gray-500 transition duration-150 ease-in-out hover:text-gray-700 focus:outline-none"
-                                            >
-                                                {user.name}
-
-                                                <svg
-                                                    className="-me-0.5 ms-2 h-4 w-4"
-                                                    xmlns="http://www.w3.org/2000/svg"
-                                                    viewBox="0 0 20 20"
-                                                    fill="currentColor"
-                                                >
-                                                    <path
-                                                        fillRule="evenodd"
-                                                        d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                                                        clipRule="evenodd"
-                                                    />
-                                                </svg>
-                                            </button>
-                                        </span>
-                                    </Dropdown.Trigger>
-
-                                    <Dropdown.Content>
-                                        <Dropdown.Link
-                                            href={route('profile.edit')}
-                                        >
-                                            Profile
-                                        </Dropdown.Link>
-                                        <Dropdown.Link
-                                            href={route('logout')}
-                                            method="post"
-                                            as="button"
-                                        >
-                                            Log Out
-                                        </Dropdown.Link>
-                                    </Dropdown.Content>
-                                </Dropdown>
-                            </div>
-                        </div>
-
-                        <div className="-me-2 flex items-center sm:hidden">
-                            <button
-                                onClick={() =>
-                                    setShowingNavigationDropdown(
-                                        (previousState) => !previousState,
-                                    )
-                                }
-                                className="inline-flex items-center justify-center rounded-md p-2 text-gray-400 transition duration-150 ease-in-out hover:bg-gray-100 hover:text-gray-500 focus:bg-gray-100 focus:text-gray-500 focus:outline-none"
-                            >
-                                <svg
-                                    className="h-6 w-6"
-                                    stroke="currentColor"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path
-                                        className={
-                                            !showingNavigationDropdown
-                                                ? 'inline-flex'
-                                                : 'hidden'
-                                        }
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth="2"
-                                        d="M4 6h16M4 12h16M4 18h16"
-                                    />
-                                    <path
-                                        className={
-                                            showingNavigationDropdown
-                                                ? 'inline-flex'
-                                                : 'hidden'
-                                        }
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth="2"
-                                        d="M6 18L18 6M6 6l12 12"
-                                    />
-                                </svg>
-                            </button>
-                        </div>
-                    </div>
+        <div className="min-h-screen w-full bg-white text-black dark:bg-black flex">
+            {/* Sidebar principal */}
+            <aside className="hidden md:flex lg:flex flex-col justify-center items-center gap-8 bg-white dark:bg-black border-r dark:border-gray-800 w-64 max-w-[100vw] md:w-48 lg:w-64 py-8 fixed top-0 left-0 h-screen z-40 overflow-y-auto">
+                <Link href="/publications">
+                    <ApplicationLogo className="h-16 w-16 text-black dark:text-white" />
+                </Link>
+                <NavLink
+                    href="/publications"
+                    icon={FiHome}
+                    label="Inicio"
+                    active={window.location.pathname.startsWith(
+                        "/publications"
+                    )}
+                />
+                <NavLink
+                    href="#"
+                    icon={FiSearch}
+                    label="Buscador"
+                    onClick={(e) => {
+                        e.preventDefault();
+                        setShowSearch(true);
+                    }}
+                />
+                {isMobileChat && (
+                    <NavLink
+                        href={route("chats")}
+                        icon={FiUsers}
+                        label="Chat"
+                    />
+                )}
+                <div className="relative">
+                    <NavLink
+                        href="#"
+                        icon={FiBell}
+                        label="Alertas"
+                        onClick={(e) => {
+                            e.preventDefault();
+                            openAlerts();
+                        }}
+                    />
+                    {hasNewAlerts && (
+                        <span className="absolute top-2 right-2 block h-3 w-3 rounded-full bg-red-500 border-2 border-white"></span>
+                    )}
                 </div>
+                <NavLink
+                    href={route("profile")}
+                    icon={FiUser}
+                    label="Perfil"
+                    active={route().current("profile")}
+                />
+                <NavLink
+                    href={route("settings.edit")}
+                    icon={FiSettings}
+                    label="Ajustes"
+                    active={route().current("settings.edit")}
+                />
+            </aside>
 
-                <div
-                    className={
-                        (showingNavigationDropdown ? 'block' : 'hidden') +
-                        ' sm:hidden'
-                    }
-                >
-                    <div className="space-y-1 pb-3 pt-2">
-                        <ResponsiveNavLink
-                            href={route('dashboard')}
-                            active={route().current('dashboard')}
-                        >
-                            Dashboard
-                        </ResponsiveNavLink>
-                    </div>
-
-                    <div className="border-t border-gray-200 pb-1 pt-4">
-                        <div className="px-4">
-                            <div className="text-base font-medium text-gray-800">
-                                {user.name}
-                            </div>
-                            <div className="text-sm font-medium text-gray-500">
-                                {user.email}
-                            </div>
+            {/* Contenido principal y Nav inferior */}
+            <div className="flex-1 flex flex-col bg-white dark:bg-black">
+                <main className="flex-1 p-4 md:ml-48 lg:ml-64 relative bg-white dark:bg-black pb-16 md:pb-0">
+                    {selectedChat ? (
+                        <div className="-m-4 h-full">
+                            {" "}
+                            {/* Aseguramos que este div también ocupe h-full */}
+                            <ChatWindow
+                                selectedChat={selectedChat}
+                                messages={messages}
+                                setMessages={setMessages}
+                                currentUserId={authUser.id}
+                                onClose={() => setSelectedChat(null)}
+                                onShowImageModal={handleShowImageModal}
+                            />
                         </div>
+                    ) : (
+                        children
+                    )}
+                </main>
 
-                        <div className="mt-3 space-y-1">
-                            <ResponsiveNavLink href={route('profile.edit')}>
-                                Profile
-                            </ResponsiveNavLink>
-                            <ResponsiveNavLink
-                                method="post"
-                                href={route('logout')}
-                                as="button"
-                            >
-                                Log Out
-                            </ResponsiveNavLink>
-                        </div>
-                    </div>
+                {/* Nav inferior móvil */}
+                <nav className="md:hidden flex fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-black border-t dark:border-gray-800 justify-around items-center h-16">
+                    <NavLink
+                        href="/publications"
+                        icon={FiHome}
+                        label="Inicio"
+                        active={window.location.pathname.startsWith(
+                            "/publications"
+                        )}
+                    />
+                    <NavLink
+                        href="#"
+                        icon={FiSearch}
+                        label="Buscador"
+                        onClick={(e) => {
+                            e.preventDefault();
+                            setShowSearch(true);
+                        }}
+                    />
+                    <NavLink
+                        href={route("chats")}
+                        icon={FiUsers}
+                        label="Chat"
+                    />
+                    <Link href="/publications">
+                        <ApplicationLogo className="h-8 w-8 text-black dark:text-white" />
+                    </Link>
+                    <NavLink
+                        href="#"
+                        icon={FiBell}
+                        label="Alertas"
+                        onClick={(e) => {
+                            e.preventDefault();
+                            openAlerts();
+                        }}
+                    />
+
+                    <NavLink
+                        href={route("profile")}
+                        icon={FiUser}
+                        label="Perfil"
+                        active={route().current("profile")}
+                    />
+
+                    <NavLink
+                        href={route("settings.edit")}
+                        icon={FiSettings}
+                        label="Ajustes"
+                        active={route().current("settings.edit")}
+                    />
+                </nav>
+            </div>
+
+            {!isMobileChat && (
+                <div className="hidden md:block sticky top-0 right-0 h-screen z-30 w-96 max-w-[100vw]">
+                    <ChatSidebar onChatSelect={handleChatSelect} />
                 </div>
-            </nav>
-
-            {header && (
-                <header className="bg-white shadow">
-                    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-                        {header}
-                    </div>
-                </header>
             )}
-
-            <main>{children}</main>
+            <ModalAlerts
+                open={showAlerts}
+                onClose={() => setShowAlerts(false)}
+                {...alertsData}
+            />
+            <ModalSearch
+                open={showSearch}
+                onClose={() => setShowSearch(false)}
+                authUser={authUser}
+            />
+            {showImage && (
+                <ModalImage
+                    open={!!showImage}
+                    onClose={() => setShowImage(null)}
+                    imageURL={showImage}
+                />
+            )}
         </div>
     );
 }

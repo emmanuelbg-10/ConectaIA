@@ -1,23 +1,26 @@
-import { Link } from '@inertiajs/react';
+import { Link } from "@inertiajs/react";
+import clsx from "clsx";
 
 export default function NavLink({
     active = false,
-    className = '',
-    children,
+    icon: Icon,
+    label,
+    className = "",
     ...props
 }) {
     return (
         <Link
             {...props}
-            className={
-                'inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium leading-5 transition duration-150 ease-in-out focus:outline-none ' +
-                (active
-                    ? 'border-indigo-400 text-gray-900 focus:border-indigo-700'
-                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 focus:border-gray-300 focus:text-gray-700') +
+            className={clsx(
+                "flex flex-col items-center justify-center gap-1 px-4 py-2 text-sm font-medium transition duration-150 ease-in-out",
+                active
+                    ? "text-[#214478] dark:text-[#214478]"
+                    : "text-gray-500 hover:text-[#214478] dark:text-gray-400 dark:hover:text-[#214478]",
                 className
-            }
+            )}
         >
-            {children}
+            <Icon className="h-6 w-6" />
+            <span className="hidden md:block">{label}</span>
         </Link>
     );
 }
