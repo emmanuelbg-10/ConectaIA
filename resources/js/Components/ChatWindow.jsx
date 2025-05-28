@@ -7,7 +7,7 @@ window.Pusher = Pusher;
 
 const echo = new Echo({
     broadcaster: "pusher",
-    key: "fe9bb49ebd480f64f723",
+    key: "95741552f01d1a255053",
     cluster: "eu",
     forceTLS: true,
 });
@@ -22,7 +22,7 @@ const ChatWindow = ({
     currentUserId,
     onClose,
     setMessages,
-    onShowImageModal
+    onShowImageModal,
 }) => {
     const [newMessage, setNewMessage] = useState("");
     const [selectedImage, setSelectedImage] = useState(null);
@@ -173,7 +173,9 @@ const ChatWindow = ({
                                         src={message.imageURL}
                                         alt="Adjunto"
                                         className="w-full h-auto rounded-lg max-h-40 sm:max-h-56 md:max-h-72 lg:max-h-80 transition-all duration-300"
-                                        onClick={() => handleImageClick(message.imageURL)}
+                                        onClick={() =>
+                                            handleImageClick(message.imageURL)
+                                        }
                                     />
                                 </div>
                             )}

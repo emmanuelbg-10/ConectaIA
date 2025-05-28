@@ -89,7 +89,7 @@ EOT;
         } else {
             return response()->json([
                 'allowed' => false,
-                'message' => 'Error al validar el contenidMMMo.',
+                'message' => 'Error al validar el contenido.',
             ], 500);
         }
     }
